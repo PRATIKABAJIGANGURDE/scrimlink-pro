@@ -289,19 +289,19 @@ const ScrimManagement = () => {
     if (!scrim) return <div>Loading...</div>;
 
     return (
-        <div className="min-h-screen bg-background p-8">
+        <div className="min-h-screen bg-background p-4 md:p-8">
             <div className="max-w-6xl mx-auto space-y-8">
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <Button variant="ghost" onClick={() => navigate(isAdmin ? "/admin" : "/team/dashboard")}>
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div className="flex flex-col gap-2 w-full md:w-auto">
+                        <Button variant="ghost" className="w-fit -ml-2" onClick={() => navigate(isAdmin ? "/admin" : "/team/dashboard")}>
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Back
                         </Button>
                         <div>
-                            <h1 className="text-3xl font-bold">{scrim.name}</h1>
-                            <div className="flex items-center gap-4 text-muted-foreground mt-1">
-                                <span className="flex items-center gap-1">
+                            <h1 className="text-2xl md:text-3xl font-bold">{scrim.name}</h1>
+                            <div className="flex flex-wrap items-center gap-2 md:gap-4 text-muted-foreground mt-1">
+                                <span className="flex items-center gap-1 text-sm">
                                     <Calendar className="h-4 w-4" />
                                     {new Date(scrim.startTime || "").toLocaleString()}
                                 </span>
@@ -349,20 +349,20 @@ const ScrimManagement = () => {
                     )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Matches Column */}
-                    <div className="md:col-span-2 space-y-8">
+                    <div className="md:col-span-1 space-y-6">
                         <Card>
                             <CardHeader>
                                 <CardTitle>Matches</CardTitle>
-                                <CardDescription>Match results</CardDescription>
+                                <CardDescription>Match schedule and results</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
                                     {matches.map((match) => (
-                                        <div key={match.id} className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
+                                        <div key={match.id} className="flex flex-col gap-3 p-4 bg-muted rounded-lg border border-border">
                                             <div className="flex items-center gap-4">
-                                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                                                     <span className="font-bold">#{match.matchNumber}</span>
                                                 </div>
                                                 <div>
@@ -375,11 +375,11 @@ const ScrimManagement = () => {
                                             {isAdmin && (
                                                 <Dialog open={selectedMatch?.id === match.id} onOpenChange={(open) => !open && setSelectedMatch(null)}>
                                                     <DialogTrigger asChild>
-                                                        <Button variant="outline" size="sm" onClick={() => openMatchDialog(match)}>
+                                                        <Button variant="outline" size="sm" className="w-full" onClick={() => openMatchDialog(match)}>
                                                             Enter Results
                                                         </Button>
                                                     </DialogTrigger>
-                                                    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                                                    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto w-[95vw]">
                                                         <DialogHeader>
                                                             <DialogTitle>Match {match.matchNumber} Results</DialogTitle>
                                                             <DialogDescription>Enter placement and kills for each player</DialogDescription>
@@ -416,7 +416,7 @@ const ScrimManagement = () => {
                                                                             />
                                                                         </div>
                                                                     </div>
-                                                                    <div className="grid grid-cols-2 gap-4">
+                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                                         {Object.entries(matchStats[st.teamId]?.players || {}).map(([playerId, kills]) => {
                                                                             // Find player name from the fetched roster
                                                                             const player = allPlayers.find((p: any) => p.playerId === playerId);
@@ -467,11 +467,13 @@ const ScrimManagement = () => {
                     </div>
 
                     {/* Teams Column */}
-                    <div className="space-y-8">
+                    <div className="md:col-span-2 space-y-6">
                         <Card>
-                            <CardHeader>
-                                <CardTitle>Participating Teams</CardTitle>
-                                <CardDescription>{scrimTeams.length} teams joined</CardDescription>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle>Participating Teams</CardTitle>
+                                    <CardDescription>{scrimTeams.length} teams joined</CardDescription>
+                                </div>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 {isAdmin && (
@@ -494,8 +496,8 @@ const ScrimManagement = () => {
 
                                 <div className="space-y-2">
                                     {scrimTeams.map((st) => (
-                                        <div key={st.id} className="flex items-center justify-between p-2 bg-muted rounded">
-                                            <span>{st.teamName}</span>
+                                        <div key={st.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                                            <span className="font-medium">{st.teamName}</span>
                                         </div>
                                     ))}
                                 </div>

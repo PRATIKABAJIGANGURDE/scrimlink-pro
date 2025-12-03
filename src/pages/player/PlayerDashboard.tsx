@@ -8,6 +8,7 @@ import { getCurrentPlayer, signOut, getTeamById, getPlayerStats, getTeamStats } 
 import { Player, Team } from "@/types";
 import { Users, LogOut, Target, Trophy, Clock, BarChart3, Crosshair, TrendingUp } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
 
 const PlayerDashboard = () => {
   const navigate = useNavigate();
@@ -72,34 +73,22 @@ const PlayerDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Users className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-xl font-bold">{player.username}</h1>
-              <p className="text-sm text-muted-foreground">Player Dashboard</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate("/rankings")}>
-              <Crown className="h-4 w-4 mr-2" />
-              Rankings
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/player/stats")}>
-              <BarChart3 className="h-4 w-4 mr-2" />
-              View Stats
-            </Button>
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
-          </div>
-        </div>
-      </header>
+      <ResponsiveNavbar
+        title={player.username}
+        subtitle="Player Dashboard"
+        icon={<Users className="h-8 w-8 text-primary" />}
+      >
+        <Button variant="outline" size="sm" onClick={() => navigate("/rankings")}>
+          <Trophy className="h-4 w-4 mr-2" />
+          Rankings
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleLogout}>
+          <LogOut className="h-4 w-4 mr-2" />
+          Logout
+        </Button>
+      </ResponsiveNavbar>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-4 md:py-8">
         {/* Status Card */}
         {isPending && (
           <Card className="mb-8 border-accent/50 bg-accent/5">
@@ -121,7 +110,7 @@ const PlayerDashboard = () => {
         )}
 
         {/* Stats Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">

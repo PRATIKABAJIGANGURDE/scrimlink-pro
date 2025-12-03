@@ -8,14 +8,14 @@ const Landing = () => {
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <header className="relative">
-        <nav className="container mx-auto px-4 py-6 flex items-center justify-between">
+        <nav className="container mx-auto px-4 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center">
               <Trophy className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="text-xl font-semibold">ScrimHub</span>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap justify-center gap-3">
             <Link to="/rankings">
               <Button variant="ghost" size="sm">Rankings</Button>
             </Link>

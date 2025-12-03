@@ -23,6 +23,7 @@ import {
 } from "@/lib/storage";
 import { Team, JoinRequest, Player, Scrim, Match, MatchTeamStats } from "@/types";
 import { Trophy, Users, Copy, Check, LogOut, UserPlus, UserCheck, UserX, Target, Calendar, Plus, BarChart, Crown } from "lucide-react";
+import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
 
 const TeamDashboard = () => {
   const navigate = useNavigate();
@@ -184,34 +185,26 @@ const TeamDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Trophy className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-xl font-bold">{team.name}</h1>
-              <p className="text-sm text-muted-foreground">Team Dashboard</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate("/rankings")}>
-              <Crown className="h-4 w-4 mr-2" />
-              Rankings
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/team/stats")}>
-              <BarChart className="h-4 w-4 mr-2" />
-              View Stats
-            </Button>
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
-          </div>
-        </div>
-      </header>
+      <ResponsiveNavbar
+        title={team.name}
+        subtitle="Team Dashboard"
+        icon={<Trophy className="h-8 w-8 text-primary" />}
+      >
+        <Button variant="outline" size="sm" onClick={() => navigate("/rankings")}>
+          <Crown className="h-4 w-4 mr-2" />
+          Rankings
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => navigate("/team/stats")}>
+          <BarChart className="h-4 w-4 mr-2" />
+          View Stats
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleLogout}>
+          <LogOut className="h-4 w-4 mr-2" />
+          Logout
+        </Button>
+      </ResponsiveNavbar>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-4 md:py-8">
         {/* Join Code Card */}
         <Card className="mb-8">
           <CardContent className="p-6">
@@ -231,7 +224,7 @@ const TeamDashboard = () => {
         </Card>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
@@ -290,7 +283,7 @@ const TeamDashboard = () => {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="roster" className="space-y-6">
+        < Tabs defaultValue="roster" className="space-y-6" >
           <TabsList>
             <TabsTrigger value="roster">Roster</TabsTrigger>
             <TabsTrigger value="requests">
@@ -318,21 +311,21 @@ const TeamDashboard = () => {
                 ) : (
                   <div className="space-y-3">
                     {roster.map((player) => (
-                      <div key={player.id} className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                      <div key={player.id} className="flex flex-wrap items-center justify-between gap-4 p-4 bg-muted rounded-lg">
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                          <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
                             <span className="font-semibold">{player.username[0].toUpperCase()}</span>
                           </div>
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <p className="font-medium">{player.username}</p>
                               {player.role === 'IGL' && <Badge variant="default" className="text-xs">IGL</Badge>}
                               {player.role && player.role !== 'IGL' && <Badge variant="outline" className="text-xs">{player.role}</Badge>}
                             </div>
-                            <p className="text-sm text-muted-foreground">{player.email}</p>
+                            <p className="text-sm text-muted-foreground break-all">{player.email}</p>
                           </div>
                         </div>
-                        <Badge variant="secondary">Active</Badge>
+                        <Badge variant="secondary" className="ml-auto sm:ml-0">Active</Badge>
                       </div>
                     ))}
                   </div>
@@ -402,26 +395,26 @@ const TeamDashboard = () => {
                 ) : (
                   <div className="space-y-4">
                     {scrims.map((scrim) => (
-                      <div key={scrim.id} className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
+                      <div key={scrim.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-muted rounded-lg border border-border">
                         <div className="flex items-center gap-4">
                           <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
                             <Target className="h-6 w-6 text-primary" />
                           </div>
                           <div>
                             <h4 className="font-semibold text-lg">{scrim.name}</h4>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-muted-foreground mt-1">
                               <span className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
                                 {new Date(scrim.startTime || "").toLocaleString()}
                               </span>
                               <span>{scrim.matchCount} Matches</span>
-                              <Badge variant={scrim.status === 'upcoming' ? 'secondary' : 'default'}>
+                              <Badge variant={scrim.status === 'upcoming' ? 'secondary' : 'default'} className="whitespace-nowrap">
                                 {scrim.status.toUpperCase()}
                               </Badge>
                             </div>
                           </div>
                         </div>
-                        <Button variant="outline" onClick={() => navigate(`/scrim/${scrim.id}`)}>
+                        <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate(`/scrim/${scrim.id}`)}>
                           Manage
                         </Button>
                       </div>
@@ -431,9 +424,9 @@ const TeamDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
-      </main>
-    </div>
+        </Tabs >
+      </main >
+    </div >
   );
 };
 

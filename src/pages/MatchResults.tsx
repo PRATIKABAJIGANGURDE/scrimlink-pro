@@ -74,7 +74,7 @@ const MatchResults = () => {
     const selectedMatch = matches.find(m => m.id === selectedMatchId);
 
     return (
-        <div className="min-h-screen bg-background p-8">
+        <div className="min-h-screen bg-background p-4 md:p-8">
             <div className="max-w-6xl mx-auto space-y-8">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -119,7 +119,7 @@ const MatchResults = () => {
                             {matches.length > 0 && (
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Match Number</label>
-                                    <div className="grid grid-cols-3 gap-2">
+                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-3 gap-2">
                                         {matches.map((match) => (
                                             <Button
                                                 key={match.id}
@@ -127,7 +127,7 @@ const MatchResults = () => {
                                                 className="w-full"
                                                 onClick={() => setSelectedMatchId(match.id)}
                                             >
-                                                Match {match.matchNumber}
+                                                #{match.matchNumber}
                                             </Button>
                                         ))}
                                     </div>
@@ -158,45 +158,81 @@ const MatchResults = () => {
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-[80px]">Rank</TableHead>
-                                        <TableHead>Team</TableHead>
-                                        <TableHead className="text-center">Kills</TableHead>
-                                        <TableHead className="text-center">Place Pts</TableHead>
-                                        <TableHead className="text-right">Total Pts</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {results.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                                                No results available for this match yet.
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        results.map((result, index) => (
-                                            <TableRow key={result.id} className={result.is_booyah ? "bg-yellow-500/10" : ""}>
-                                                <TableCell className="font-medium">
-                                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted">
+                            <div className="space-y-4 md:hidden">
+                                {results.length === 0 ? (
+                                    <div className="text-center py-8 text-muted-foreground">
+                                        No results available for this match yet.
+                                    </div>
+                                ) : (
+                                    results.map((result, index) => (
+                                        <div key={result.id} className={`flex flex-col gap-2 p-4 rounded-lg border border-border ${result.is_booyah ? "bg-yellow-500/10" : "bg-muted/50"}`}>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-xs font-bold">
                                                         #{result.placement || index + 1}
                                                     </div>
-                                                </TableCell>
-                                                <TableCell>
                                                     <div className="font-semibold flex items-center gap-2">
                                                         {result.team?.name}
-                                                        {result.is_booyah && <Trophy className="h-3 w-3 text-yellow-500" />}
+                                                        {result.is_booyah && <Trophy className="h-3 w-3 text-yellow-500 flex-shrink-0" />}
                                                     </div>
+                                                </div>
+                                                <span className="font-bold text-lg">{result.total_points} pts</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground border-t border-border/50 pt-2 mt-1">
+                                                <div className="text-center">
+                                                    <span className="block font-semibold text-foreground">{result.team_kills}</span>
+                                                    Kills
+                                                </div>
+                                                <div className="text-center">
+                                                    <span className="block font-semibold text-foreground">{result.placement_points}</span>
+                                                    Place Pts
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                            <div className="hidden md:block overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[60px]">Rank</TableHead>
+                                            <TableHead className="min-w-[120px]">Team</TableHead>
+                                            <TableHead className="text-center">Kills</TableHead>
+                                            <TableHead className="text-center">Place</TableHead>
+                                            <TableHead className="text-right">Total</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {results.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                                    No results available for this match yet.
                                                 </TableCell>
-                                                <TableCell className="text-center font-mono">{result.team_kills}</TableCell>
-                                                <TableCell className="text-center font-mono text-muted-foreground">{result.placement_points}</TableCell>
-                                                <TableCell className="text-right font-bold text-lg">{result.total_points}</TableCell>
                                             </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
+                                        ) : (
+                                            results.map((result, index) => (
+                                                <TableRow key={result.id} className={result.is_booyah ? "bg-yellow-500/10" : ""}>
+                                                    <TableCell className="font-medium">
+                                                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-xs">
+                                                            #{result.placement || index + 1}
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="font-semibold flex items-center gap-2 text-sm">
+                                                            {result.team?.name}
+                                                            {result.is_booyah && <Trophy className="h-3 w-3 text-yellow-500 flex-shrink-0" />}
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-center font-mono">{result.team_kills}</TableCell>
+                                                    <TableCell className="text-center font-mono text-muted-foreground">{result.placement_points}</TableCell>
+                                                    <TableCell className="text-right font-bold text-lg">{result.total_points}</TableCell>
+                                                </TableRow>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>

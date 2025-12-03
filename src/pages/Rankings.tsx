@@ -90,7 +90,7 @@ const Rankings = () => {
     };
 
     return (
-        <div className="min-h-screen bg-background p-8">
+        <div className="min-h-screen bg-background p-4 md:p-8">
             <div className="max-w-6xl mx-auto space-y-8">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -118,7 +118,7 @@ const Rankings = () => {
                 )}
 
                 <Tabs defaultValue="teams" className="w-full" onValueChange={setActiveTab}>
-                    <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+                    <TabsList className="grid w-full grid-cols-2 max-w-[400px] mx-auto md:mx-0">
                         <TabsTrigger value="teams" className="flex items-center gap-2">
                             <Swords className="h-4 w-4" />
                             Team Rankings
@@ -136,46 +136,83 @@ const Rankings = () => {
                                 <CardDescription>Ranked by total points (Placement + Kills)</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-[100px]">Rank</TableHead>
-                                            <TableHead>Team</TableHead>
-                                            <TableHead className="text-center">Matches</TableHead>
-                                            <TableHead className="text-center">Booyahs</TableHead>
-                                            <TableHead className="text-center">Kills</TableHead>
-                                            <TableHead className="text-right">Total Points</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {loading ? (
-                                            <TableRow>
-                                                <TableCell colSpan={6} className="text-center py-8">Loading rankings...</TableCell>
-                                            </TableRow>
-                                        ) : teamRankings.length === 0 ? (
-                                            <TableRow>
-                                                <TableCell colSpan={6} className="text-center py-8">No team data available</TableCell>
-                                            </TableRow>
-                                        ) : (
-                                            teamRankings.map((team, index) => (
-                                                <TableRow key={team.id}>
-                                                    <TableCell className="font-medium">
+                                <div className="space-y-4 md:hidden">
+                                    {loading ? (
+                                        <div className="text-center py-8">Loading rankings...</div>
+                                    ) : teamRankings.length === 0 ? (
+                                        <div className="text-center py-8">No team data available</div>
+                                    ) : (
+                                        teamRankings.map((team, index) => (
+                                            <div key={team.id} className="flex flex-col gap-2 p-4 bg-muted/50 rounded-lg border border-border">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
                                                         <div className="flex items-center justify-center w-8 h-8">
                                                             {getRankIcon(index)}
                                                         </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div className="font-semibold">{team.name}</div>
-                                                    </TableCell>
-                                                    <TableCell className="text-center">{team.matches}</TableCell>
-                                                    <TableCell className="text-center font-bold text-yellow-600 dark:text-yellow-400">{team.booyahs}</TableCell>
-                                                    <TableCell className="text-center">{team.kills}</TableCell>
-                                                    <TableCell className="text-right font-bold text-lg">{team.points}</TableCell>
+                                                        <span className="font-bold text-lg">{team.name}</span>
+                                                    </div>
+                                                    <span className="font-bold text-xl">{team.points} pts</span>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-2 text-sm text-muted-foreground border-t border-border/50 pt-2 mt-1">
+                                                    <div className="text-center">
+                                                        <span className="block font-semibold text-foreground">{team.matches}</span>
+                                                        Matches
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <span className="block font-semibold text-yellow-600 dark:text-yellow-400">{team.booyahs}</span>
+                                                        Booyahs
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <span className="block font-semibold text-foreground">{team.kills}</span>
+                                                        Kills
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                                <div className="hidden md:block overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-[100px]">Rank</TableHead>
+                                                <TableHead>Team</TableHead>
+                                                <TableHead className="text-center">Matches</TableHead>
+                                                <TableHead className="text-center">Booyahs</TableHead>
+                                                <TableHead className="text-center">Kills</TableHead>
+                                                <TableHead className="text-right">Total Points</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {loading ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="text-center py-8">Loading rankings...</TableCell>
                                                 </TableRow>
-                                            ))
-                                        )}
-                                    </TableBody>
-                                </Table>
+                                            ) : teamRankings.length === 0 ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="text-center py-8">No team data available</TableCell>
+                                                </TableRow>
+                                            ) : (
+                                                teamRankings.map((team, index) => (
+                                                    <TableRow key={team.id}>
+                                                        <TableCell className="font-medium">
+                                                            <div className="flex items-center justify-center w-8 h-8">
+                                                                {getRankIcon(index)}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="font-semibold">{team.name}</div>
+                                                        </TableCell>
+                                                        <TableCell className="text-center">{team.matches}</TableCell>
+                                                        <TableCell className="text-center font-bold text-yellow-600 dark:text-yellow-400">{team.booyahs}</TableCell>
+                                                        <TableCell className="text-center">{team.kills}</TableCell>
+                                                        <TableCell className="text-right font-bold text-lg">{team.points}</TableCell>
+                                                    </TableRow>
+                                                ))
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             </CardContent>
                         </Card>
                     </TabsContent>
@@ -187,49 +224,88 @@ const Rankings = () => {
                                 <CardDescription>Ranked by total kills</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-[100px]">Rank</TableHead>
-                                            <TableHead>Player</TableHead>
-                                            <TableHead>Team</TableHead>
-                                            <TableHead className="text-center">Matches</TableHead>
-                                            <TableHead className="text-center">Avg Kills</TableHead>
-                                            <TableHead className="text-right">Total Kills</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {loading ? (
-                                            <TableRow>
-                                                <TableCell colSpan={6} className="text-center py-8">Loading rankings...</TableCell>
-                                            </TableRow>
-                                        ) : playerRankings.length === 0 ? (
-                                            <TableRow>
-                                                <TableCell colSpan={6} className="text-center py-8">No player data available</TableCell>
-                                            </TableRow>
-                                        ) : (
-                                            playerRankings.map((player, index) => (
-                                                <TableRow key={player.id}>
-                                                    <TableCell className="font-medium">
+                                <div className="space-y-4 md:hidden">
+                                    {loading ? (
+                                        <div className="text-center py-8">Loading rankings...</div>
+                                    ) : playerRankings.length === 0 ? (
+                                        <div className="text-center py-8">No player data available</div>
+                                    ) : (
+                                        playerRankings.map((player, index) => (
+                                            <div key={player.id} className="flex flex-col gap-2 p-4 bg-muted/50 rounded-lg border border-border">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
                                                         <div className="flex items-center justify-center w-8 h-8">
                                                             {getRankIcon(index)}
                                                         </div>
-                                                    </TableCell>
-                                                    <TableCell className="font-semibold">{player.username}</TableCell>
-                                                    <TableCell className="text-muted-foreground">{player.teamName}</TableCell>
-                                                    <TableCell className="text-center">{player.matches}</TableCell>
-                                                    <TableCell className="text-center">{(player.kills / player.matches).toFixed(1)}</TableCell>
-                                                    <TableCell className="text-right font-bold text-lg">{player.kills}</TableCell>
+                                                        <div>
+                                                            <div className="font-bold text-lg">{player.username}</div>
+                                                            <div className="text-xs text-muted-foreground">{player.teamName}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="block font-bold text-xl">{player.kills}</span>
+                                                        <span className="text-xs text-muted-foreground">Kills</span>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground border-t border-border/50 pt-2 mt-1">
+                                                    <div className="text-center">
+                                                        <span className="block font-semibold text-foreground">{player.matches}</span>
+                                                        Matches
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <span className="block font-semibold text-foreground">{(player.kills / (player.matches || 1)).toFixed(1)}</span>
+                                                        Avg Kills
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                                <div className="hidden md:block overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-[100px]">Rank</TableHead>
+                                                <TableHead>Player</TableHead>
+                                                <TableHead>Team</TableHead>
+                                                <TableHead className="text-center">Matches</TableHead>
+                                                <TableHead className="text-center">Avg Kills</TableHead>
+                                                <TableHead className="text-right">Total Kills</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {loading ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="text-center py-8">Loading rankings...</TableCell>
                                                 </TableRow>
-                                            ))
-                                        )}
-                                    </TableBody>
-                                </Table>
+                                            ) : playerRankings.length === 0 ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="text-center py-8">No player data available</TableCell>
+                                                </TableRow>
+                                            ) : (
+                                                playerRankings.map((player, index) => (
+                                                    <TableRow key={player.id}>
+                                                        <TableCell className="font-medium">
+                                                            <div className="flex items-center justify-center w-8 h-8">
+                                                                {getRankIcon(index)}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="font-semibold">{player.username}</TableCell>
+                                                        <TableCell className="text-muted-foreground">{player.teamName}</TableCell>
+                                                        <TableCell className="text-center">{player.matches}</TableCell>
+                                                        <TableCell className="text-center">{(player.kills / player.matches).toFixed(1)}</TableCell>
+                                                        <TableCell className="text-right font-bold text-lg">{player.kills}</TableCell>
+                                                    </TableRow>
+                                                ))
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             </CardContent>
                         </Card>
                     </TabsContent>
                 </Tabs>
-            </div>
+            </div >
         </div >
     );
 };
