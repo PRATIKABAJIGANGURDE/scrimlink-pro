@@ -5,14 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { getPlayerByEmail, setCurrentPlayer } from "@/lib/storage";
+import { signIn } from "@/lib/storage";
 import { Users, ArrowLeft } from "lucide-react";
 
 const PlayerLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -22,35 +22,24 @@ const PlayerLogin = () => {
     e.preventDefault();
     setLoading(true);
 
-    const player = getPlayerByEmail(formData.email);
-    
-    if (!player) {
+    try {
+      await signIn(formData.email, formData.password);
+
       toast({
-        title: "Error",
-        description: "No player found with this email",
+        title: "Welcome back!",
+        description: "Logged in successfully",
+      });
+      navigate("/player/dashboard");
+    } catch (error: any) {
+      console.error(error);
+      toast({
+        title: "Login failed",
+        description: error.message || "Invalid email or password",
         variant: "destructive",
       });
+    } finally {
       setLoading(false);
-      return;
     }
-
-    if (player.password !== formData.password) {
-      toast({
-        title: "Error",
-        description: "Incorrect password",
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
-
-    setCurrentPlayer(player);
-    toast({
-      title: "Welcome back!",
-      description: `Logged in as ${player.username}`,
-    });
-    navigate("/player/dashboard");
-    setLoading(false);
   };
 
   return (
@@ -82,7 +71,7 @@ const PlayerLogin = () => {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -94,12 +83,12 @@ const PlayerLogin = () => {
                 required
               />
             </div>
-            
+
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Logging in..." : "Login"}
             </Button>
           </form>
-          
+
           <p className="text-center text-sm text-muted-foreground mt-6">
             Don't have an account?{" "}
             <Link to="/player/register" className="text-primary hover:underline">

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { savePlayer, saveJoinRequest, getPlayerByEmail, getTeamByJoinCode, generateId, setCurrentPlayer } from "@/lib/storage";
+import { signUpPlayer, getTeamByJoinCode, setCurrentPlayer } from "@/lib/storage";
 import { Users, ArrowLeft, Clock } from "lucide-react";
 import { Player, JoinRequest } from "@/types";
 
@@ -15,7 +15,7 @@ const PlayerRegister = () => {
   const [loading, setLoading] = useState(false);
   const [showPending, setShowPending] = useState(false);
   const [teamName, setTeamName] = useState("");
-  
+
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -48,55 +48,33 @@ const PlayerRegister = () => {
       return;
     }
 
-    const existingPlayer = getPlayerByEmail(formData.email);
-    if (existingPlayer) {
+    try {
+      const user = await signUpPlayer(
+        formData.email,
+        formData.password,
+        formData.username,
+        formData.joinCode.toUpperCase()
+      );
+
+      // We need to fetch the team name to display in the success message
+      // This is a bit redundant but ensures we have the correct team name
+      // In a real app, signUpPlayer could return { user, team }
+      const team = await getTeamByJoinCode(formData.joinCode.toUpperCase());
+      if (team) setTeamName(team.name);
+
+      setShowPending(true);
+    } catch (error: any) {
+      console.error(error);
       toast({
-        title: "Error",
-        description: "A player with this email already exists",
+        title: "Registration failed",
+        description: error.message || "An error occurred during registration",
         variant: "destructive",
       });
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const team = getTeamByJoinCode(formData.joinCode.toUpperCase());
-    if (!team) {
-      toast({
-        title: "Error",
-        description: "Invalid team join code",
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
-
-    const player: Player = {
-      id: generateId(),
-      username: formData.username,
-      email: formData.email,
-      password: formData.password,
-      teamId: team.id,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-    };
-
-    const joinRequest: JoinRequest = {
-      id: generateId(),
-      playerId: player.id,
-      playerUsername: player.username,
-      playerEmail: player.email,
-      teamId: team.id,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-    };
-
-    savePlayer(player);
-    saveJoinRequest(joinRequest);
-    setCurrentPlayer(player);
-    setTeamName(team.name);
-    setShowPending(true);
-    setLoading(false);
   };
+
 
   if (showPending) {
     return (
@@ -154,7 +132,7 @@ const PlayerRegister = () => {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -166,7 +144,7 @@ const PlayerRegister = () => {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="joinCode">Team Join Code</Label>
               <Input
@@ -180,7 +158,7 @@ const PlayerRegister = () => {
               />
               <p className="text-xs text-muted-foreground">Get this code from your team captain</p>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -192,7 +170,7 @@ const PlayerRegister = () => {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
               <Input
@@ -204,12 +182,12 @@ const PlayerRegister = () => {
                 required
               />
             </div>
-            
+
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Sending Request..." : "Join Team"}
             </Button>
           </form>
-          
+
           <p className="text-center text-sm text-muted-foreground mt-6">
             Already have an account?{" "}
             <Link to="/player/login" className="text-primary hover:underline">

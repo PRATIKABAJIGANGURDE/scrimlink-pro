@@ -1,143 +1,704 @@
-import { Team, Player, JoinRequest, Scrim, Match, MatchTeamStats, MatchPlayerStats, TeamLineup } from '@/types';
+import { Team, Player, JoinRequest, Scrim, Match, MatchTeamStats, MatchPlayerStats, ScrimTeam } from '@/types';
+import { supabase } from './supabase';
 
-const KEYS = {
-  TEAMS: 'ff_teams',
-  PLAYERS: 'ff_players',
-  JOIN_REQUESTS: 'ff_join_requests',
-  SCRIMS: 'ff_scrims',
-  MATCHES: 'ff_matches',
-  MATCH_TEAM_STATS: 'ff_match_team_stats',
-  MATCH_PLAYER_STATS: 'ff_match_player_stats',
-  TEAM_LINEUPS: 'ff_team_lineups',
-  CURRENT_TEAM: 'ff_current_team',
-  CURRENT_PLAYER: 'ff_current_player',
-};
-
-function getItem<T>(key: string): T[] {
-  const data = localStorage.getItem(key);
-  return data ? JSON.parse(data) : [];
-}
-
-function setItem<T>(key: string, data: T[]): void {
-  localStorage.setItem(key, JSON.stringify(data));
-}
+// Helper to map Supabase response to our types (handling snake_case to camelCase if needed)
+// For now, we'll assume the types match or we handle it manually.
+// The schema uses snake_case (team_id, join_code), but types use camelCase.
+// We need to handle this mapping.
 
 // Teams
-export const getTeams = (): Team[] => getItem<Team>(KEYS.TEAMS);
-export const saveTeam = (team: Team): void => {
-  const teams = getTeams();
-  teams.push(team);
-  setItem(KEYS.TEAMS, teams);
+export const getTeams = async (): Promise<Team[]> => {
+  const { data, error } = await supabase.from('teams').select('*');
+  if (error) throw error;
+  return data.map((t: any) => ({
+    ...t,
+    joinCode: t.join_code,
+    createdAt: t.created_at,
+    logoUrl: t.logo_url
+  }));
 };
-export const getTeamByEmail = (email: string): Team | undefined => 
-  getTeams().find(t => t.email === email);
-export const getTeamById = (id: string): Team | undefined => 
-  getTeams().find(t => t.id === id);
-export const getTeamByJoinCode = (code: string): Team | undefined => 
-  getTeams().find(t => t.joinCode === code);
+
+export const saveTeam = async (team: Team): Promise<void> => {
+  const { error } = await supabase.from('teams').insert({
+    id: team.id,
+    name: team.name,
+    email: team.email,
+    password: team.password,
+    join_code: team.joinCode,
+    country: team.country,
+    logo_url: team.logoUrl,
+    created_at: team.createdAt
+  });
+  if (error) throw error;
+};
+
+export const getTeamByEmail = async (email: string): Promise<Team | null> => {
+  const { data, error } = await supabase
+    .from('teams')
+    .select('*')
+    .eq('email', email)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "not found"
+  if (!data) return null;
+
+  return {
+    ...data,
+    joinCode: data.join_code,
+    createdAt: data.created_at,
+    logoUrl: data.logo_url
+  };
+};
+
+export const getTeamById = async (id: string): Promise<Team | null> => {
+  const { data, error } = await supabase
+    .from('teams')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  if (!data) return null;
+
+  return {
+    ...data,
+    joinCode: data.join_code,
+    createdAt: data.created_at,
+    logoUrl: data.logo_url
+  };
+};
+
+export const getTeamByJoinCode = async (code: string): Promise<Team | null> => {
+  const { data, error } = await supabase
+    .from('teams')
+    .select('*')
+    .eq('join_code', code)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  if (!data) return null;
+
+  return {
+    ...data,
+    joinCode: data.join_code,
+    createdAt: data.created_at,
+    logoUrl: data.logo_url
+  };
+};
 
 // Players
-export const getPlayers = (): Player[] => getItem<Player>(KEYS.PLAYERS);
-export const savePlayer = (player: Player): void => {
-  const players = getPlayers();
-  players.push(player);
-  setItem(KEYS.PLAYERS, players);
+export const getPlayers = async (): Promise<Player[]> => {
+  const { data, error } = await supabase.from('players').select('*');
+  if (error) throw error;
+  return data.map((p: any) => ({
+    ...p,
+    teamId: p.team_id,
+    createdAt: p.created_at
+  }));
 };
-export const getPlayerByEmail = (email: string): Player | undefined => 
-  getPlayers().find(p => p.email === email);
-export const getPlayerById = (id: string): Player | undefined => 
-  getPlayers().find(p => p.id === id);
-export const getPlayersByTeamId = (teamId: string): Player[] => 
-  getPlayers().filter(p => p.teamId === teamId && p.status === 'approved');
-export const updatePlayer = (playerId: string, updates: Partial<Player>): void => {
-  const players = getPlayers();
-  const index = players.findIndex(p => p.id === playerId);
-  if (index !== -1) {
-    players[index] = { ...players[index], ...updates };
-    setItem(KEYS.PLAYERS, players);
+
+export const savePlayer = async (player: Player): Promise<void> => {
+  const { error } = await supabase.from('players').insert({
+    id: player.id,
+    username: player.username,
+    email: player.email,
+    password: player.password,
+    team_id: player.teamId,
+    status: player.status,
+    created_at: player.createdAt
+  });
+  if (error) throw error;
+};
+
+export const getPlayerByEmail = async (email: string): Promise<Player | null> => {
+  const { data, error } = await supabase
+    .from('players')
+    .select('*')
+    .eq('email', email)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  if (!data) return null;
+
+  return {
+    ...data,
+    teamId: data.team_id,
+    createdAt: data.created_at
+  };
+};
+
+export const getPlayerById = async (id: string): Promise<Player | null> => {
+  const { data, error } = await supabase
+    .from('players')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  if (!data) return null;
+
+  return {
+    ...data,
+    teamId: data.team_id,
+    createdAt: data.created_at
+  };
+};
+
+export const getPlayersByTeamId = async (teamId: string): Promise<Player[]> => {
+  const { data, error } = await supabase
+    .from('players')
+    .select('*')
+    .eq('team_id', teamId)
+    .eq('status', 'approved');
+
+  if (error) throw error;
+  return data.map((p: any) => ({
+    ...p,
+    teamId: p.team_id,
+    createdAt: p.created_at
+  }));
+};
+
+export const updatePlayer = async (playerId: string, updates: Partial<Player>): Promise<void> => {
+  // Map camelCase updates to snake_case
+  const dbUpdates: any = { ...updates };
+  if (updates.teamId) {
+    dbUpdates.team_id = updates.teamId;
+    delete dbUpdates.teamId;
   }
+  // Remove fields that shouldn't be updated or don't exist in DB if any
+
+  const { error } = await supabase
+    .from('players')
+    .update(dbUpdates)
+    .eq('id', playerId);
+
+  if (error) throw error;
 };
 
 // Join Requests
-export const getJoinRequests = (): JoinRequest[] => getItem<JoinRequest>(KEYS.JOIN_REQUESTS);
-export const saveJoinRequest = (request: JoinRequest): void => {
-  const requests = getJoinRequests();
-  requests.push(request);
-  setItem(KEYS.JOIN_REQUESTS, requests);
+export const getJoinRequests = async (): Promise<JoinRequest[]> => {
+  const { data, error } = await supabase.from('join_requests').select('*');
+  if (error) throw error;
+  return data.map((r: any) => ({
+    ...r,
+    playerId: r.player_id,
+    teamId: r.team_id,
+    createdAt: r.created_at
+  }));
 };
-export const getJoinRequestsByTeamId = (teamId: string): JoinRequest[] => 
-  getJoinRequests().filter(r => r.teamId === teamId && r.status === 'pending');
-export const updateJoinRequest = (requestId: string, status: 'approved' | 'rejected'): void => {
-  const requests = getJoinRequests();
-  const index = requests.findIndex(r => r.id === requestId);
-  if (index !== -1) {
-    requests[index].status = status;
-    setItem(KEYS.JOIN_REQUESTS, requests);
-  }
+
+export const saveJoinRequest = async (request: JoinRequest): Promise<void> => {
+  const { error } = await supabase.from('join_requests').insert({
+    id: request.id,
+    player_id: request.playerId,
+    team_id: request.teamId,
+    status: request.status,
+    created_at: request.createdAt
+  });
+  if (error) throw error;
+};
+
+export const getJoinRequestsByTeamId = async (teamId: string): Promise<JoinRequest[]> => {
+  // We need to join with players to get username/email if not stored in join_requests
+  // But our type JoinRequest has playerUsername/playerEmail.
+  // The schema I wrote for join_requests only has IDs.
+  // I should update the query to join with players table.
+
+  const { data, error } = await supabase
+    .from('join_requests')
+    .select(`
+      *,
+      player:players (
+        username,
+        email
+      )
+    `)
+    .eq('team_id', teamId)
+    .eq('status', 'pending');
+
+  if (error) throw error;
+
+  return data.map((r: any) => ({
+    id: r.id,
+    playerId: r.player_id,
+    teamId: r.team_id,
+    status: r.status,
+    createdAt: r.created_at,
+    playerUsername: r.player.username,
+    playerEmail: r.player.email
+  }));
+};
+
+export const updateJoinRequest = async (requestId: string, status: 'approved' | 'rejected'): Promise<void> => {
+  const { error } = await supabase
+    .from('join_requests')
+    .update({ status })
+    .eq('id', requestId);
+
+  if (error) throw error;
 };
 
 // Scrims
-export const getScrims = (): Scrim[] => getItem<Scrim>(KEYS.SCRIMS);
-export const saveScrim = (scrim: Scrim): void => {
-  const scrims = getScrims();
-  scrims.push(scrim);
-  setItem(KEYS.SCRIMS, scrims);
+export const getScrims = async (): Promise<Scrim[]> => {
+  const { data, error } = await supabase.from('scrims').select('*');
+  if (error) throw error;
+  return data.map((s: any) => ({
+    ...s,
+    hostTeamId: s.host_team_id,
+    matchCount: s.match_count,
+    startTime: s.start_time,
+    createdAt: s.created_at
+  }));
 };
-export const getScrimById = (id: string): Scrim | undefined => 
-  getScrims().find(s => s.id === id);
+
+export const saveScrim = async (scrim: Scrim): Promise<void> => {
+  const { error } = await supabase.from('scrims').insert({
+    id: scrim.id,
+    host_team_id: scrim.hostTeamId,
+    name: scrim.name,
+    match_count: scrim.matchCount,
+    start_time: scrim.startTime,
+    status: scrim.status,
+    created_at: scrim.createdAt
+  });
+  if (error) throw error;
+};
+
+export const getScrimById = async (id: string): Promise<Scrim | null> => {
+  const { data, error } = await supabase
+    .from('scrims')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  if (!data) return null;
+
+  return {
+    ...data,
+    hostTeamId: data.host_team_id,
+    matchCount: data.match_count,
+    startTime: data.start_time,
+    createdAt: data.created_at
+  };
+};
 
 // Matches
-export const getMatches = (): Match[] => getItem<Match>(KEYS.MATCHES);
-export const saveMatch = (match: Match): void => {
-  const matches = getMatches();
-  matches.push(match);
-  setItem(KEYS.MATCHES, matches);
+export const getMatches = async (): Promise<Match[]> => {
+  const { data, error } = await supabase.from('matches').select('*');
+  if (error) throw error;
+  return data.map((m: any) => ({
+    ...m,
+    scrimId: m.scrim_id,
+    matchNumber: m.match_number,
+    mapName: m.map_name,
+    createdAt: m.created_at
+  }));
 };
-export const getMatchesByScrimId = (scrimId: string): Match[] => 
-  getMatches().filter(m => m.scrimId === scrimId);
+
+export const saveMatch = async (match: Match): Promise<void> => {
+  const { error } = await supabase.from('matches').insert({
+    id: match.id,
+    scrim_id: match.scrimId,
+    match_number: match.matchNumber,
+    map_name: match.mapName,
+    status: match.status,
+    created_at: match.createdAt
+  });
+  if (error) throw error;
+};
+
+export const getMatchesByScrimId = async (scrimId: string): Promise<Match[]> => {
+  const { data, error } = await supabase
+    .from('matches')
+    .select('*')
+    .eq('scrim_id', scrimId);
+
+  if (error) throw error;
+  return data.map((m: any) => ({
+    ...m,
+    scrimId: m.scrim_id,
+    matchNumber: m.match_number,
+    mapName: m.map_name,
+    createdAt: m.created_at
+  }));
+};
+
+export const updateMatch = async (matchId: string, updates: Partial<Match>): Promise<void> => {
+  const dbUpdates: any = { ...updates };
+  if (updates.scrimId) { dbUpdates.scrim_id = updates.scrimId; delete dbUpdates.scrimId; }
+  if (updates.matchNumber) { dbUpdates.match_number = updates.matchNumber; delete dbUpdates.matchNumber; }
+  if (updates.mapName) { dbUpdates.map_name = updates.mapName; delete dbUpdates.mapName; }
+  if (updates.createdAt) { dbUpdates.created_at = updates.createdAt; delete dbUpdates.createdAt; }
+
+  const { error } = await supabase
+    .from('matches')
+    .update(dbUpdates)
+    .eq('id', matchId);
+
+  if (error) throw error;
+};
+
+// Scrim Teams
+export const getScrimTeams = async (scrimId: string): Promise<ScrimTeam[]> => {
+  const { data, error } = await supabase
+    .from('scrim_teams')
+    .select('*')
+    .eq('scrim_id', scrimId);
+
+  if (error) throw error;
+  return data.map((st: any) => ({
+    ...st,
+    scrimId: st.scrim_id,
+    teamId: st.team_id,
+    teamName: st.team_name,
+    joinedAt: st.joined_at
+  }));
+};
+
+export const saveScrimTeam = async (scrimTeam: ScrimTeam): Promise<void> => {
+  const { error } = await supabase.from('scrim_teams').insert({
+    id: scrimTeam.id,
+    scrim_id: scrimTeam.scrimId,
+    team_id: scrimTeam.teamId,
+    team_name: scrimTeam.teamName,
+    joined_at: scrimTeam.joinedAt
+  });
+  if (error) throw error;
+};
 
 // Match Stats
-export const getMatchTeamStats = (): MatchTeamStats[] => getItem<MatchTeamStats>(KEYS.MATCH_TEAM_STATS);
-export const saveMatchTeamStats = (stats: MatchTeamStats): void => {
-  const allStats = getMatchTeamStats();
-  allStats.push(stats);
-  setItem(KEYS.MATCH_TEAM_STATS, allStats);
+export const saveMatchTeamStats = async (stats: MatchTeamStats): Promise<void> => {
+  const { error } = await supabase.from('match_team_stats').insert({
+    id: stats.id,
+    match_id: stats.matchId,
+    team_id: stats.teamId,
+    placement: stats.placement,
+    placement_points: stats.placementPoints,
+    team_kills: stats.teamKills,
+    total_points: stats.totalPoints,
+    is_booyah: stats.isBooyah
+  });
+  if (error) throw error;
 };
 
-export const getMatchPlayerStats = (): MatchPlayerStats[] => getItem<MatchPlayerStats>(KEYS.MATCH_PLAYER_STATS);
-export const saveMatchPlayerStats = (stats: MatchPlayerStats): void => {
-  const allStats = getMatchPlayerStats();
-  allStats.push(stats);
-  setItem(KEYS.MATCH_PLAYER_STATS, allStats);
+export const saveMatchPlayerStats = async (stats: { id: string, matchId: string, playerId: string, teamId: string, kills: number }): Promise<void> => {
+  const { error } = await supabase.from('match_player_stats').insert({
+    id: stats.id,
+    match_id: stats.matchId,
+    player_id: stats.playerId,
+    team_id: stats.teamId,
+    kills: stats.kills
+  });
+  if (error) throw error;
 };
 
-// Session
-export const setCurrentTeam = (team: Team | null): void => {
-  if (team) {
-    localStorage.setItem(KEYS.CURRENT_TEAM, JSON.stringify(team));
-  } else {
-    localStorage.removeItem(KEYS.CURRENT_TEAM);
+export const getMatchTeamStats = async (matchId: string): Promise<MatchTeamStats[]> => {
+  const { data, error } = await supabase
+    .from('match_team_stats')
+    .select('*')
+    .eq('match_id', matchId);
+
+  if (error) throw error;
+  return data.map((s: any) => ({
+    ...s,
+    matchId: s.match_id,
+    teamId: s.team_id,
+    placementPoints: s.placement_points,
+    teamKills: s.team_kills,
+    totalPoints: s.total_points,
+    isBooyah: s.is_booyah
+  }));
+};
+
+export const getTeamStats = async (teamId: string) => {
+  const { data, error } = await supabase
+    .from('match_team_stats')
+    .select(`
+      *,
+      match:matches (
+        match_number,
+        map_name,
+        created_at,
+        scrim:scrims (
+          name
+        )
+      )
+    `)
+    .eq('team_id', teamId);
+
+  if (error) throw error;
+
+  return data.map((s: any) => ({
+    ...s,
+    matchId: s.match_id,
+    teamId: s.team_id,
+    placementPoints: s.placement_points,
+    teamKills: s.team_kills,
+    totalPoints: s.total_points,
+    isBooyah: s.is_booyah,
+    match: {
+      matchNumber: s.match.match_number,
+      mapName: s.match.map_name,
+      createdAt: s.match.created_at,
+      scrimName: s.match.scrim.name
+    }
+  }));
+};
+
+export const getPlayerStats = async (playerId: string) => {
+  const { data, error } = await supabase
+    .from('match_player_stats')
+    .select(`
+      *,
+      match:matches (
+        match_number,
+        map_name,
+        created_at,
+        scrim:scrims (
+          name
+        )
+      )
+    `)
+    .eq('player_id', playerId);
+
+  if (error) throw error;
+
+  return data.map((s: any) => ({
+    ...s,
+    matchId: s.match_id,
+    playerId: s.player_id,
+    teamId: s.team_id,
+    match: {
+      matchNumber: s.match.match_number,
+      mapName: s.match.map_name,
+      createdAt: s.match.created_at,
+      scrimName: s.match.scrim.name
+    }
+  }));
+};
+
+// Auth Helpers
+export const signUpTeam = async (email: string, password: string, name: string, joinCode: string, country?: string) => {
+  // 1. Sign up with Supabase Auth
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email,
+    password,
+  });
+
+  if (authError) throw authError;
+  if (!authData.user) throw new Error("No user returned from signup");
+
+  console.log("SignUp successful. User:", authData.user.id);
+  console.log("Session:", authData.session ? "Active" : "Null (Email confirmation likely required)");
+
+  if (!authData.session) {
+    throw new Error("Please disable 'Confirm Email' in Supabase Auth settings to allow immediate login.");
   }
-};
-export const getCurrentTeam = (): Team | null => {
-  const data = localStorage.getItem(KEYS.CURRENT_TEAM);
-  return data ? JSON.parse(data) : null;
+
+  // 2. Create Team Profile
+  const { error: profileError } = await supabase
+    .from('teams')
+    .insert({
+      id: authData.user.id,
+      name,
+      email,
+      join_code: joinCode,
+      country,
+      logo_url: `https://api.dicebear.com/7.x/initials/svg?seed=${name}`
+    });
+
+  if (profileError) {
+    // Cleanup auth user if profile creation fails (optional but good practice)
+    // await supabase.auth.admin.deleteUser(authData.user.id); 
+    throw profileError;
+  }
+
+  return authData.user;
 };
 
-export const setCurrentPlayer = (player: Player | null): void => {
-  if (player) {
-    localStorage.setItem(KEYS.CURRENT_PLAYER, JSON.stringify(player));
-  } else {
-    localStorage.removeItem(KEYS.CURRENT_PLAYER);
-  }
+export const signUpPlayer = async (email: string, password: string, username: string, joinCode: string) => {
+  // 1. Verify Join Code first
+  const { data: team, error: teamError } = await supabase
+    .from('teams')
+    .select('id')
+    .eq('join_code', joinCode)
+    .single();
+
+  if (teamError || !team) throw new Error("Invalid join code");
+
+  // 2. Sign up with Supabase Auth
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email,
+    password,
+  });
+
+  if (authError) throw authError;
+  if (!authData.user) throw new Error("No user returned from signup");
+
+  // 3. Create Player Profile
+  const { error: profileError } = await supabase
+    .from('players')
+    .insert({
+      id: authData.user.id,
+      username,
+      email,
+      team_id: team.id,
+      status: 'pending'
+    });
+
+  if (profileError) throw profileError;
+
+  // 4. Create Join Request
+  const { error: requestError } = await supabase
+    .from('join_requests')
+    .insert({
+      player_id: authData.user.id,
+      team_id: team.id,
+      status: 'pending'
+    });
+
+  if (requestError) throw requestError;
+
+  return authData.user;
 };
-export const getCurrentPlayer = (): Player | null => {
-  const data = localStorage.getItem(KEYS.CURRENT_PLAYER);
-  return data ? JSON.parse(data) : null;
+
+export const signIn = async (email: string, password: string) => {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  if (error) throw error;
+  return data.user;
+};
+
+export const signOut = async () => {
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
+};
+
+export const getCurrentUser = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+};
+
+// Data Fetching Helpers (Updated to use Auth ID where applicable)
+
+export const getCurrentTeam = async () => {
+  const user = await getCurrentUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from('teams')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  if (error) return null;
+  return {
+    ...data,
+    joinCode: data.join_code,
+    logoUrl: data.logo_url,
+    createdAt: data.created_at
+  };
+};
+
+export const getCurrentPlayer = async () => {
+  const user = await getCurrentUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from('players')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  if (error) return null;
+  return {
+    ...data,
+    teamId: data.team_id,
+    createdAt: data.created_at
+  };
+};
+
+// Deprecated: setCurrentTeam and setCurrentPlayer are no longer needed with Supabase Auth
+export const setCurrentTeam = (team: Team | null) => { };
+export const setCurrentPlayer = (player: Player | null) => { };
+
+// Admins
+export const getAdmin = async (id: string) => {
+  const { data, error } = await supabase
+    .from('admins')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data;
+};
+
+export const signUpAdmin = async (email: string, password: string) => {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+  });
+
+  if (error) throw error;
+  if (data.user) {
+    const { error: dbError } = await supabase.from('admins').insert({
+      id: data.user.id,
+      email: data.user.email
+    });
+    if (dbError) throw dbError;
+  }
+  return data;
+};
+
+// Scrim Players (Roster)
+export const getScrimPlayers = async (scrimId: string) => {
+  const { data, error } = await supabase
+    .from('scrim_players')
+    .select(`
+      *,
+      player:players (
+        username,
+        email
+      )
+    `)
+    .eq('scrim_id', scrimId);
+
+  if (error) throw error;
+  return data.map((sp: any) => ({
+    id: sp.id,
+    scrimId: sp.scrim_id,
+    teamId: sp.team_id,
+    playerId: sp.player_id,
+    playerUsername: sp.player.username,
+    playerEmail: sp.player.email
+  }));
+};
+
+export const saveScrimPlayer = async (scrimId: string, teamId: string, playerId: string) => {
+  const { error } = await supabase.from('scrim_players').insert({
+    scrim_id: scrimId,
+    team_id: teamId,
+    player_id: playerId
+  });
+  if (error) throw error;
+};
+
+export const deleteScrimPlayer = async (scrimId: string, playerId: string) => {
+  const { error } = await supabase
+    .from('scrim_players')
+    .delete()
+    .eq('scrim_id', scrimId)
+    .eq('player_id', playerId);
+  if (error) throw error;
 };
 
 // Utility
-export const generateId = (): string => Math.random().toString(36).substring(2, 15);
+export const generateId = (): string => crypto.randomUUID();
 export const generateJoinCode = (): string => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let code = '';

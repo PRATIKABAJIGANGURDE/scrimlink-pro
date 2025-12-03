@@ -12,6 +12,13 @@ import PlayerLogin from "./pages/player/PlayerLogin";
 import PlayerDashboard from "./pages/player/PlayerDashboard";
 import NotFound from "./pages/NotFound";
 
+import ScrimManagement from "./pages/scrim/ScrimManagement";
+import TeamStats from "./pages/team/TeamStats";
+import PlayerStats from "./pages/player/PlayerStats";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminRegister from "./pages/admin/AdminRegister";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -25,9 +32,15 @@ const App = () => (
           <Route path="/team/register" element={<TeamRegister />} />
           <Route path="/team/login" element={<TeamLogin />} />
           <Route path="/team/dashboard" element={<TeamDashboard />} />
+          <Route path="/team/stats" element={<TeamStats />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/register" element={<AdminRegister />} />
           <Route path="/player/register" element={<PlayerRegister />} />
           <Route path="/player/login" element={<PlayerLogin />} />
           <Route path="/player/dashboard" element={<PlayerDashboard />} />
+          <Route path="/player/stats" element={<PlayerStats />} />
+          <Route path="/scrim/:id" element={<ScrimManagement />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

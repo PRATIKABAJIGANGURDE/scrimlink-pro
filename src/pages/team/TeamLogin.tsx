@@ -5,14 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { getTeamByEmail, setCurrentTeam } from "@/lib/storage";
+import { signIn } from "@/lib/storage";
 import { Trophy, ArrowLeft } from "lucide-react";
 
 const TeamLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -22,35 +22,24 @@ const TeamLogin = () => {
     e.preventDefault();
     setLoading(true);
 
-    const team = getTeamByEmail(formData.email);
-    
-    if (!team) {
+    try {
+      await signIn(formData.email, formData.password);
+
       toast({
-        title: "Error",
-        description: "No team found with this email",
+        title: "Welcome back!",
+        description: "Logged in successfully",
+      });
+      navigate("/team/dashboard");
+    } catch (error: any) {
+      console.error(error);
+      toast({
+        title: "Login failed",
+        description: error.message || "Invalid email or password",
         variant: "destructive",
       });
+    } finally {
       setLoading(false);
-      return;
     }
-
-    if (team.password !== formData.password) {
-      toast({
-        title: "Error",
-        description: "Incorrect password",
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
-
-    setCurrentTeam(team);
-    toast({
-      title: "Welcome back!",
-      description: `Logged in as ${team.name}`,
-    });
-    navigate("/team/dashboard");
-    setLoading(false);
   };
 
   return (
@@ -82,7 +71,7 @@ const TeamLogin = () => {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -94,12 +83,12 @@ const TeamLogin = () => {
                 required
               />
             </div>
-            
+
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Logging in..." : "Login"}
             </Button>
           </form>
-          
+
           <p className="text-center text-sm text-muted-foreground mt-6">
             Don't have a team?{" "}
             <Link to="/team/register" className="text-primary hover:underline">

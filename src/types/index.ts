@@ -3,7 +3,7 @@ export interface Team {
   name: string;
   email: string;
   password: string;
-  logo?: string;
+  logoUrl?: string;
   joinCode: string;
   country?: string;
   createdAt: string;
@@ -35,6 +35,7 @@ export interface Scrim {
   hostTeamId: string;
   matchCount: number;
   status: 'upcoming' | 'ongoing' | 'completed';
+  startTime?: string;
   createdAt: string;
 }
 
@@ -42,7 +43,9 @@ export interface Match {
   id: string;
   scrimId: string;
   matchNumber: number;
-  status: 'pending' | 'completed';
+  mapName?: string;
+  status: 'pending' | 'ongoing' | 'completed';
+  createdAt: string;
 }
 
 export interface MatchTeamStats {
@@ -62,6 +65,14 @@ export interface MatchPlayerStats {
   playerId: string;
   teamId: string;
   kills: number;
+}
+
+export interface ScrimTeam {
+  id: string;
+  scrimId: string;
+  teamId: string;
+  teamName: string;
+  joinedAt: string;
 }
 
 export interface TeamLineup {

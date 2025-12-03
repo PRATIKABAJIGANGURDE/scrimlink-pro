@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { saveTeam, getTeamByEmail, generateId, generateJoinCode, setCurrentTeam } from "@/lib/storage";
+import { signUpTeam, generateJoinCode } from "@/lib/storage";
 import { Trophy, ArrowLeft, Copy, Check } from "lucide-react";
 import { Team } from "@/types";
 
@@ -16,7 +16,7 @@ const TeamRegister = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [copied, setCopied] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     teamName: "",
     email: "",
@@ -49,33 +49,28 @@ const TeamRegister = () => {
       return;
     }
 
-    const existingTeam = getTeamByEmail(formData.email);
-    if (existingTeam) {
+    try {
+      const code = generateJoinCode();
+      await signUpTeam(
+        formData.email,
+        formData.password,
+        formData.teamName,
+        code,
+        formData.country
+      );
+
+      setJoinCode(code);
+      setShowSuccess(true);
+    } catch (error: any) {
+      console.error(error);
       toast({
-        title: "Error",
-        description: "A team with this email already exists",
+        title: "Registration failed",
+        description: error.message || "An error occurred during registration",
         variant: "destructive",
       });
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const code = generateJoinCode();
-    const team: Team = {
-      id: generateId(),
-      name: formData.teamName,
-      email: formData.email,
-      password: formData.password,
-      joinCode: code,
-      country: formData.country,
-      createdAt: new Date().toISOString(),
-    };
-
-    saveTeam(team);
-    setJoinCode(code);
-    setShowSuccess(true);
-    setCurrentTeam(team);
-    setLoading(false);
   };
 
   const copyCode = () => {
@@ -148,7 +143,7 @@ const TeamRegister = () => {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -160,7 +155,7 @@ const TeamRegister = () => {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="country">Country (Optional)</Label>
               <Input
@@ -170,7 +165,7 @@ const TeamRegister = () => {
                 onChange={(e) => setFormData({ ...formData, country: e.target.value })}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -182,7 +177,7 @@ const TeamRegister = () => {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
               <Input
@@ -194,12 +189,12 @@ const TeamRegister = () => {
                 required
               />
             </div>
-            
+
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Creating Team..." : "Create Team"}
             </Button>
           </form>
-          
+
           <p className="text-center text-sm text-muted-foreground mt-6">
             Already have a team?{" "}
             <Link to="/team/login" className="text-primary hover:underline">

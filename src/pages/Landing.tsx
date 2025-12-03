@@ -22,9 +22,12 @@ const Landing = () => {
             <Link to="/player/login">
               <Button size="sm">Player Login</Button>
             </Link>
+            <Link to="/admin">
+              <Button variant="outline" size="sm">Admin</Button>
+            </Link>
           </div>
         </nav>
-        
+
         <div className="container mx-auto px-4 py-20 md:py-32 text-center max-w-4xl">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
             <Zap className="h-4 w-4" />
@@ -75,7 +78,7 @@ const Landing = () => {
                 </p>
               </CardContent>
             </Card>
-            
+
             <Card className="bg-card border-border/50 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
@@ -87,7 +90,7 @@ const Landing = () => {
                 </p>
               </CardContent>
             </Card>
-            
+
             <Card className="bg-card border-border/50 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
@@ -99,7 +102,7 @@ const Landing = () => {
                 </p>
               </CardContent>
             </Card>
-            
+
             <Card className="bg-card border-border/50 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
@@ -111,7 +114,7 @@ const Landing = () => {
                 </p>
               </CardContent>
             </Card>
-            
+
             <Card className="bg-card border-border/50 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
@@ -123,7 +126,7 @@ const Landing = () => {
                 </p>
               </CardContent>
             </Card>
-            
+
             <Card className="bg-card border-border/50 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">

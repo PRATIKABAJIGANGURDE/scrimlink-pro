@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getCurrentPlayer, setCurrentPlayer, getTeamById } from "@/lib/storage";
+import { getCurrentPlayer, signOut, getTeamById } from "@/lib/storage";
 import { Player, Team } from "@/types";
 import { Users, LogOut, Target, Trophy, Clock, BarChart3 } from "lucide-react";
 
@@ -15,21 +15,33 @@ const PlayerDashboard = () => {
   const [team, setTeam] = useState<Team | null>(null);
 
   useEffect(() => {
-    const currentPlayer = getCurrentPlayer();
-    if (!currentPlayer) {
-      navigate("/player/login");
-      return;
-    }
-    setPlayer(currentPlayer);
-    
-    if (currentPlayer.teamId) {
-      const playerTeam = getTeamById(currentPlayer.teamId);
-      setTeam(playerTeam || null);
-    }
+    const init = async () => {
+      try {
+        const currentPlayer = await getCurrentPlayer();
+        if (!currentPlayer) {
+          navigate("/player/login");
+          return;
+        }
+        setPlayer(currentPlayer);
+
+        if (currentPlayer.teamId) {
+          try {
+            const playerTeam = await getTeamById(currentPlayer.teamId);
+            setTeam(playerTeam || null);
+          } catch (error) {
+            console.error("Failed to load team data:", error);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load player:", error);
+        navigate("/player/login");
+      }
+    };
+    init();
   }, [navigate]);
 
-  const handleLogout = () => {
-    setCurrentPlayer(null);
+  const handleLogout = async () => {
+    await signOut();
     navigate("/");
   };
 
@@ -50,10 +62,16 @@ const PlayerDashboard = () => {
               <p className="text-sm text-muted-foreground">Player Dashboard</p>
             </div>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate("/player/stats")}>
+              <BarChart3 className="h-4 w-4 mr-2" />
+              View Stats
+            </Button>
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -69,7 +87,7 @@ const PlayerDashboard = () => {
                 <div>
                   <h3 className="font-semibold">Pending Approval</h3>
                   <p className="text-sm text-muted-foreground">
-                    Your request to join <span className="font-medium text-foreground">{team?.name || "the team"}</span> is pending. 
+                    Your request to join <span className="font-medium text-foreground">{team?.name || "the team"}</span> is pending.
                     The team captain will review your request soon.
                   </p>
                 </div>
@@ -112,7 +130,7 @@ const PlayerDashboard = () => {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
@@ -126,7 +144,7 @@ const PlayerDashboard = () => {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
@@ -140,7 +158,7 @@ const PlayerDashboard = () => {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">

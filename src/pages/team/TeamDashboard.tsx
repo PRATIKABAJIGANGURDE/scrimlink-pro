@@ -4,18 +4,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  getCurrentTeam, 
-  setCurrentTeam, 
-  getJoinRequestsByTeamId, 
+import {
+  getCurrentTeam,
+  signOut,
+  getJoinRequestsByTeamId,
   getPlayersByTeamId,
   updateJoinRequest,
   updatePlayer,
-  getPlayerById
+  getScrims,
+  saveScrim,
+  saveMatch,
+  generateId
 } from "@/lib/storage";
-import { Team, JoinRequest, Player } from "@/types";
-import { Trophy, Users, Copy, Check, LogOut, UserPlus, UserCheck, UserX, Target } from "lucide-react";
+import { Team, JoinRequest, Player, Scrim, Match } from "@/types";
+import { Trophy, Users, Copy, Check, LogOut, UserPlus, UserCheck, UserX, Target, Calendar, Plus, BarChart } from "lucide-react";
 
 const TeamDashboard = () => {
   const navigate = useNavigate();
@@ -23,21 +29,98 @@ const TeamDashboard = () => {
   const [team, setTeam] = useState<Team | null>(null);
   const [requests, setRequests] = useState<JoinRequest[]>([]);
   const [roster, setRoster] = useState<Player[]>([]);
+  const [scrims, setScrims] = useState<Scrim[]>([]);
   const [copied, setCopied] = useState(false);
+  const [isCreateScrimOpen, setIsCreateScrimOpen] = useState(false);
+  const [creatingScrim, setCreatingScrim] = useState(false);
+
+  const [newScrim, setNewScrim] = useState({
+    name: "",
+    matchCount: 4,
+    startTime: "",
+  });
 
   useEffect(() => {
-    const currentTeam = getCurrentTeam();
-    if (!currentTeam) {
-      navigate("/team/login");
-      return;
-    }
-    setTeam(currentTeam);
-    loadData(currentTeam.id);
+    const init = async () => {
+      try {
+        const currentTeam = await getCurrentTeam();
+        if (!currentTeam) {
+          navigate("/team/login");
+          return;
+        }
+        setTeam(currentTeam);
+        loadData(currentTeam.id);
+      } catch (error) {
+        console.error("Failed to load team:", error);
+        navigate("/team/login");
+      }
+    };
+    init();
   }, [navigate]);
 
-  const loadData = (teamId: string) => {
-    setRequests(getJoinRequestsByTeamId(teamId));
-    setRoster(getPlayersByTeamId(teamId));
+  const loadData = async (teamId: string) => {
+    try {
+      const [reqs, players, allScrims] = await Promise.all([
+        getJoinRequestsByTeamId(teamId),
+        getPlayersByTeamId(teamId),
+        getScrims()
+      ]);
+
+      setRequests(reqs);
+      setRoster(players);
+      setScrims(allScrims);
+    } catch (error) {
+      console.error("Failed to load dashboard data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCreateScrim = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!team) return;
+    setCreatingScrim(true);
+
+    try {
+      const scrimId = generateId();
+      const scrim: Scrim = {
+        id: scrimId,
+        name: newScrim.name,
+        hostTeamId: team.id,
+        matchCount: newScrim.matchCount,
+        status: 'upcoming',
+        startTime: newScrim.startTime,
+        createdAt: new Date().toISOString(),
+      };
+
+      await saveScrim(scrim);
+
+      const matchPromises = [];
+      for (let i = 1; i <= newScrim.matchCount; i++) {
+        const match: Match = {
+          id: generateId(),
+          scrimId: scrimId,
+          matchNumber: i,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+        };
+        matchPromises.push(saveMatch(match));
+      }
+      await Promise.all(matchPromises);
+
+      toast({ title: "Success", description: "Scrim created successfully" });
+      setIsCreateScrimOpen(false);
+      setNewScrim({ name: "", matchCount: 4, startTime: "" });
+      loadData(team.id);
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error", description: "Failed to create scrim", variant: "destructive" });
+    } finally {
+      setCreatingScrim(false);
+    }
   };
 
   const copyJoinCode = () => {
@@ -49,23 +132,47 @@ const TeamDashboard = () => {
     }
   };
 
-  const handleLogout = () => {
-    setCurrentTeam(null);
+  const handleLogout = async () => {
+    await signOut();
     navigate("/");
   };
 
-  const handleApprove = (request: JoinRequest) => {
-    updateJoinRequest(request.id, 'approved');
-    updatePlayer(request.playerId, { status: 'approved' });
-    toast({ title: "Approved", description: `${request.playerUsername} has been added to the roster` });
-    if (team) loadData(team.id);
+  const handleApprove = async (request: JoinRequest) => {
+    console.log("Approving request:", request);
+    try {
+      await updateJoinRequest(request.id, 'approved');
+      console.log("Join request updated");
+      await updatePlayer(request.playerId, { status: 'approved' });
+      console.log("Player status updated");
+      toast({ title: "Approved", description: `${request.playerUsername} has been added to the roster` });
+      if (team) {
+        console.log("Reloading data for team:", team.id);
+        await loadData(team.id);
+      }
+    } catch (error) {
+      console.error("Error approving request:", error);
+      toast({
+        title: "Error",
+        description: "Failed to approve request",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleReject = (request: JoinRequest) => {
-    updateJoinRequest(request.id, 'rejected');
-    updatePlayer(request.playerId, { status: 'rejected' });
-    toast({ title: "Rejected", description: `${request.playerUsername}'s request has been rejected` });
-    if (team) loadData(team.id);
+  const handleReject = async (request: JoinRequest) => {
+    try {
+      await updateJoinRequest(request.id, 'rejected');
+      await updatePlayer(request.playerId, { status: 'rejected' });
+      toast({ title: "Rejected", description: `${request.playerUsername}'s request has been rejected` });
+      if (team) loadData(team.id);
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Error",
+        description: "Failed to reject request",
+        variant: "destructive"
+      });
+    }
   };
 
   if (!team) return null;
@@ -82,10 +189,16 @@ const TeamDashboard = () => {
               <p className="text-sm text-muted-foreground">Team Dashboard</p>
             </div>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate("/team/stats")}>
+              <BarChart className="h-4 w-4 mr-2" />
+              View Stats
+            </Button>
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -123,7 +236,7 @@ const TeamDashboard = () => {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
@@ -137,7 +250,7 @@ const TeamDashboard = () => {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
@@ -246,17 +359,48 @@ const TeamDashboard = () => {
 
           <TabsContent value="scrims">
             <Card>
-              <CardHeader>
-                <CardTitle>Scrims</CardTitle>
-                <CardDescription>Manage your scrims and matches</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Scrims</CardTitle>
+                  <CardDescription>View upcoming scrims</CardDescription>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12 text-muted-foreground">
-                  <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No scrims yet</p>
-                  <p className="text-sm mb-4">Create a scrim to start competing</p>
-                  <Button>Create Scrim</Button>
-                </div>
+                {scrims.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No scrims yet</p>
+                    <p className="text-sm mb-4">Create a scrim to start competing</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {scrims.map((scrim) => (
+                      <div key={scrim.id} className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Target className="h-6 w-6 text-primary" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-lg">{scrim.name}</h4>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {new Date(scrim.startTime || "").toLocaleString()}
+                              </span>
+                              <span>{scrim.matchCount} Matches</span>
+                              <Badge variant={scrim.status === 'upcoming' ? 'secondary' : 'default'}>
+                                {scrim.status.toUpperCase()}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        <Button variant="outline" onClick={() => navigate(`/scrim/${scrim.id}`)}>
+                          Manage
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
