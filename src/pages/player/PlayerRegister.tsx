@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { signUpPlayer, getTeamByJoinCode, setCurrentPlayer } from "@/lib/storage";
@@ -11,6 +12,7 @@ import { Player, JoinRequest } from "@/types";
 
 const PlayerRegister = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showPending, setShowPending] = useState(false);
@@ -22,7 +24,19 @@ const PlayerRegister = () => {
     password: "",
     confirmPassword: "",
     joinCode: "",
+    role: "",
   });
+
+  useEffect(() => {
+    const code = searchParams.get("code");
+    const role = searchParams.get("role");
+    if (code) {
+      setFormData(prev => ({ ...prev, joinCode: code }));
+    }
+    if (role) {
+      setFormData(prev => ({ ...prev, role: role }));
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +67,8 @@ const PlayerRegister = () => {
         formData.email,
         formData.password,
         formData.username,
-        formData.joinCode.toUpperCase()
+        formData.joinCode.toUpperCase(),
+        formData.role
       );
 
       // We need to fetch the team name to display in the success message
@@ -143,6 +158,22 @@ const PlayerRegister = () => {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <Select onValueChange={(value) => setFormData({ ...formData, role: value })} value={formData.role}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="IGL">IGL (In-Game Leader)</SelectItem>
+                  <SelectItem value="Rusher">Rusher</SelectItem>
+                  <SelectItem value="Sniper">Sniper</SelectItem>
+                  <SelectItem value="Supporter">Supporter</SelectItem>
+                  <SelectItem value="Flanker">Flanker</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

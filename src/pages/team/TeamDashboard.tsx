@@ -18,10 +18,11 @@ import {
   getScrims,
   saveScrim,
   saveMatch,
-  generateId
+  generateId,
+  getTeamStats
 } from "@/lib/storage";
-import { Team, JoinRequest, Player, Scrim, Match } from "@/types";
-import { Trophy, Users, Copy, Check, LogOut, UserPlus, UserCheck, UserX, Target, Calendar, Plus, BarChart } from "lucide-react";
+import { Team, JoinRequest, Player, Scrim, Match, MatchTeamStats } from "@/types";
+import { Trophy, Users, Copy, Check, LogOut, UserPlus, UserCheck, UserX, Target, Calendar, Plus, BarChart, Crown } from "lucide-react";
 
 const TeamDashboard = () => {
   const navigate = useNavigate();
@@ -58,17 +59,21 @@ const TeamDashboard = () => {
     init();
   }, [navigate]);
 
+  const [stats, setStats] = useState<MatchTeamStats[]>([]);
+
   const loadData = async (teamId: string) => {
     try {
-      const [reqs, players, allScrims] = await Promise.all([
+      const [reqs, players, allScrims, teamStats] = await Promise.all([
         getJoinRequestsByTeamId(teamId),
         getPlayersByTeamId(teamId),
-        getScrims()
+        getScrims(),
+        getTeamStats(teamId)
       ]);
 
       setRequests(reqs);
       setRoster(players);
       setScrims(allScrims);
+      setStats(teamStats);
     } catch (error) {
       console.error("Failed to load dashboard data:", error);
       toast({
@@ -190,6 +195,10 @@ const TeamDashboard = () => {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate("/rankings")}>
+              <Crown className="h-4 w-4 mr-2" />
+              Rankings
+            </Button>
             <Button variant="outline" onClick={() => navigate("/team/stats")}>
               <BarChart className="h-4 w-4 mr-2" />
               View Stats
@@ -222,7 +231,7 @@ const TeamDashboard = () => {
         </Card>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
@@ -241,11 +250,11 @@ const TeamDashboard = () => {
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center">
-                  <UserPlus className="h-6 w-6 text-accent" />
+                  <Target className="h-6 w-6 text-accent" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{requests.length}</p>
-                  <p className="text-sm text-muted-foreground">Pending Requests</p>
+                  <p className="text-2xl font-bold">{stats.reduce((acc, s) => acc + s.teamKills, 0)}</p>
+                  <p className="text-sm text-muted-foreground">Total Kills</p>
                 </div>
               </div>
             </CardContent>
@@ -255,11 +264,25 @@ const TeamDashboard = () => {
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Target className="h-6 w-6 text-primary" />
+                  <Trophy className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">0</p>
-                  <p className="text-sm text-muted-foreground">Scrims Played</p>
+                  <p className="text-2xl font-bold">{stats.reduce((acc, s) => acc + s.totalPoints, 0)}</p>
+                  <p className="text-sm text-muted-foreground">Total Points</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                  <Crown className="h-6 w-6 text-yellow-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.filter(s => s.isBooyah).length}</p>
+                  <p className="text-sm text-muted-foreground">Booyahs</p>
                 </div>
               </div>
             </CardContent>
@@ -301,7 +324,11 @@ const TeamDashboard = () => {
                             <span className="font-semibold">{player.username[0].toUpperCase()}</span>
                           </div>
                           <div>
-                            <p className="font-medium">{player.username}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{player.username}</p>
+                              {player.role === 'IGL' && <Badge variant="default" className="text-xs">IGL</Badge>}
+                              {player.role && player.role !== 'IGL' && <Badge variant="outline" className="text-xs">{player.role}</Badge>}
+                            </div>
                             <p className="text-sm text-muted-foreground">{player.email}</p>
                           </div>
                         </div>

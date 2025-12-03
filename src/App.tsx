@@ -18,6 +18,7 @@ import PlayerStats from "./pages/player/PlayerStats";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminRegister from "./pages/admin/AdminRegister";
+import Rankings from "./pages/Rankings";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/rankings" element={<Rankings />} />
           <Route path="/team/register" element={<TeamRegister />} />
           <Route path="/team/login" element={<TeamLogin />} />
           <Route path="/team/dashboard" element={<TeamDashboard />} />

@@ -106,8 +106,8 @@ const TeamRegister = () => {
                 </Button>
               </div>
             </div>
-            <Button className="w-full" onClick={() => navigate("/team/dashboard")}>
-              Go to Dashboard
+            <Button className="w-full" onClick={() => navigate(`/player/register?code=${joinCode}&role=IGL`)}>
+              Create IGL Profile
             </Button>
           </CardContent>
         </Card>

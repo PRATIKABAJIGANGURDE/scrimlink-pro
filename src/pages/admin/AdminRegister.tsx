@@ -1,17 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { signUpAdmin } from "@/lib/storage";
+import { signUpAdmin, signOut } from "@/lib/storage";
 import { Shield, ArrowLeft } from "lucide-react";
 
 const AdminRegister = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        signOut();
+    }, []);
 
     const [formData, setFormData] = useState({
         email: "",

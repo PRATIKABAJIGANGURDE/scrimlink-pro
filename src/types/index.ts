@@ -16,6 +16,7 @@ export interface Player {
   password: string;
   teamId?: string;
   status: 'pending' | 'approved' | 'rejected';
+  role?: 'IGL' | 'Rusher' | 'Sniper' | 'Supporter' | 'Flanker';
   createdAt: string;
 }
 

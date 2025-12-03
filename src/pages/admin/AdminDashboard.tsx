@@ -47,10 +47,10 @@ const AdminDashboard = () => {
                 if (!admin) {
                     toast({
                         title: "Access Denied",
-                        description: "You are not an admin.",
+                        description: "You are not an admin. Please login with an admin account.",
                         variant: "destructive"
                     });
-                    navigate("/");
+                    navigate("/admin/login");
                     return;
                 }
 
@@ -185,7 +185,7 @@ const AdminDashboard = () => {
                                             min="1"
                                             max="10"
                                             value={newScrim.matchCount}
-                                            onChange={(e) => setNewScrim({ ...newScrim, matchCount: parseInt(e.target.value) })}
+                                            onChange={(e) => setNewScrim({ ...newScrim, matchCount: parseInt(e.target.value) || 0 })}
                                             required
                                         />
                                     </div>

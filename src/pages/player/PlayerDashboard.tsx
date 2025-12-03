@@ -4,15 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getCurrentPlayer, signOut, getTeamById } from "@/lib/storage";
+import { getCurrentPlayer, signOut, getTeamById, getPlayerStats, getTeamStats } from "@/lib/storage";
 import { Player, Team } from "@/types";
-import { Users, LogOut, Target, Trophy, Clock, BarChart3 } from "lucide-react";
+import { Users, LogOut, Target, Trophy, Clock, BarChart3, Crosshair, TrendingUp } from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const PlayerDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [player, setPlayer] = useState<Player | null>(null);
   const [team, setTeam] = useState<Team | null>(null);
+  const [stats, setStats] = useState<any[]>([]);
+  const [teamStats, setTeamStats] = useState<any[]>([]);
 
   useEffect(() => {
     const init = async () => {
@@ -24,10 +27,18 @@ const PlayerDashboard = () => {
         }
         setPlayer(currentPlayer);
 
+        // Fetch stats
+        const playerStats = await getPlayerStats(currentPlayer.id);
+        setStats(playerStats);
+
         if (currentPlayer.teamId) {
           try {
-            const playerTeam = await getTeamById(currentPlayer.teamId);
+            const [playerTeam, tStats] = await Promise.all([
+              getTeamById(currentPlayer.teamId),
+              getTeamStats(currentPlayer.teamId)
+            ]);
             setTeam(playerTeam || null);
+            setTeamStats(tStats);
           } catch (error) {
             console.error("Failed to load team data:", error);
           }
@@ -50,6 +61,15 @@ const PlayerDashboard = () => {
   const isPending = player.status === 'pending';
   const isApproved = player.status === 'approved';
 
+  const totalKills = stats.reduce((acc, s) => acc + s.kills, 0);
+  const totalMatches = stats.length;
+  const avgKills = totalMatches > 0 ? (totalKills / totalMatches).toFixed(1) : "0.0";
+
+  // Calculate Booyahs: matches where player played AND team won
+  const booyahs = teamStats.filter(ts =>
+    ts.isBooyah && stats.some(ps => ps.matchId === ts.matchId)
+  ).length;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -63,6 +83,10 @@ const PlayerDashboard = () => {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate("/rankings")}>
+              <Crown className="h-4 w-4 mr-2" />
+              Rankings
+            </Button>
             <Button variant="outline" onClick={() => navigate("/player/stats")}>
               <BarChart3 className="h-4 w-4 mr-2" />
               View Stats
@@ -96,6 +120,62 @@ const PlayerDashboard = () => {
           </Card>
         )}
 
+        {/* Stats Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Crosshair className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{totalKills}</p>
+                  <p className="text-sm text-muted-foreground">Total Kills</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center">
+                  <Target className="h-6 w-6 text-accent" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{totalMatches}</p>
+                  <p className="text-sm text-muted-foreground">Matches Played</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-secondary/10 flex items-center justify-center">
+                  <TrendingUp className="h-6 w-6 text-secondary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{avgKills}</p>
+                  <p className="text-sm text-muted-foreground">Avg Kills</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                  <Trophy className="h-6 w-6 text-yellow-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{booyahs}</p>
+                  <p className="text-sm text-muted-foreground">Booyahs</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Team Info */}
         {isApproved && team && (
           <Card className="mb-8">
@@ -114,78 +194,50 @@ const PlayerDashboard = () => {
           </Card>
         )}
 
-        {/* Stats Overview */}
-        <h2 className="text-xl font-semibold mb-4">Your Stats</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Target className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">0</p>
-                  <p className="text-sm text-muted-foreground">Total Kills</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center">
-                  <BarChart3 className="h-6 w-6 text-accent" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">0</p>
-                  <p className="text-sm text-muted-foreground">Matches Played</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Target className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">0.0</p>
-                  <p className="text-sm text-muted-foreground">Avg Kills</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center">
-                  <Trophy className="h-6 w-6 text-accent" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">0</p>
-                  <p className="text-sm text-muted-foreground">Booyahs</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Match History */}
+        {/* Kills Graph */}
         <Card>
           <CardHeader>
-            <CardTitle>Match History</CardTitle>
-            <CardDescription>Your recent match performances</CardDescription>
+            <CardTitle>Performance Trend</CardTitle>
+            <CardDescription>Kills per match over time</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-12 text-muted-foreground">
-              <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No matches played yet</p>
-              <p className="text-sm">Your match history will appear here</p>
-            </div>
+            {stats.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No matches played yet</p>
+                <p className="text-sm">Play matches to see your performance graph</p>
+              </div>
+            ) : (
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={stats.map(s => ({
+                      name: `M${s.match.matchNumber}`,
+                      kills: s.kills,
+                      fullDate: new Date(s.match.createdAt).toLocaleDateString()
+                    }))}
+                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient id="colorKills" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
+                        <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="name" className="text-xs" />
+                    <YAxis className="text-xs" />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))' }}
+                      itemStyle={{ color: 'hsl(var(--foreground))' }}
+                    />
+                    <Area type="monotone" dataKey="kills" stroke="#8884d8" fillOpacity={1} fill="url(#colorKills)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>

@@ -88,6 +88,13 @@ const AdminLogin = () => {
                             {loading ? "Logging in..." : "Login"}
                         </Button>
                     </form>
+
+                    <p className="text-center text-sm text-muted-foreground mt-6">
+                        Need an admin account?{" "}
+                        <Link to="/admin/register" className="text-primary hover:underline">
+                            Create one here
+                        </Link>
+                    </p>
                 </CardContent>
             </Card>
         </div>

@@ -16,6 +16,9 @@ const Landing = () => {
             <span className="text-xl font-semibold">ScrimHub</span>
           </div>
           <div className="flex gap-3">
+            <Link to="/rankings">
+              <Button variant="ghost" size="sm">Rankings</Button>
+            </Link>
             <Link to="/team/login">
               <Button variant="ghost" size="sm">Team Login</Button>
             </Link>
@@ -165,7 +168,7 @@ const Landing = () => {
           <p>© 2024 ScrimHub. Built for competitive Free Fire Max.</p>
         </div>
       </footer>
-    </div>
+    </div >
   );
 };
 

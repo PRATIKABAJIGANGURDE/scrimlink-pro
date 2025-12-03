@@ -127,9 +127,15 @@ const ScrimManagement = () => {
             toast({ title: "Success", description: "Team added to scrim" });
             loadData(id);
             setSelectedTeamId("");
-        } catch (error) {
-            console.error(error);
-            toast({ title: "Error", description: "Failed to add team", variant: "destructive" });
+            setSelectedTeamId("");
+        } catch (error: any) {
+            console.error("Failed to add team:", error);
+            console.error("Error details:", error.message, error.details, error.hint);
+            toast({
+                title: "Error",
+                description: `Failed to add team: ${error.message || "Unknown error"}`,
+                variant: "destructive"
+            });
         }
     };
 
@@ -197,9 +203,14 @@ const ScrimManagement = () => {
             setSelectedMatch(null);
             setMatchStats({});
             loadData(id);
-        } catch (error) {
-            console.error(error);
-            toast({ title: "Error", description: "Failed to save results", variant: "destructive" });
+        } catch (error: any) {
+            console.error("Failed to save results:", error);
+            console.error("Error details:", error.message, error.details, error.hint);
+            toast({
+                title: "Error",
+                description: `Failed to save results: ${error.message || "Unknown error"}`,
+                variant: "destructive"
+            });
         } finally {
             setSavingResults(false);
         }
@@ -234,10 +245,13 @@ const ScrimManagement = () => {
         }
     };
 
+    const [allPlayers, setAllPlayers] = useState<any[]>([]);
+
     const openMatchDialog = async (match: Match) => {
         setSelectedMatch(match);
         // Load roster for all teams to populate inputs
         const allScrimPlayers = await getScrimPlayers(id!);
+        setAllPlayers(allScrimPlayers);
 
         const initialStats: Record<string, { placement: number; players: Record<string, number> }> = {};
 
@@ -374,12 +388,13 @@ const ScrimManagement = () => {
                                                                     </div>
                                                                     <div className="grid grid-cols-2 gap-4">
                                                                         {Object.entries(matchStats[st.teamId]?.players || {}).map(([playerId, kills]) => {
-                                                                            // Find player name (need to fetch or store in state, for now using ID or fetching)
-                                                                            // Ideally we should have the player name here. 
-                                                                            // For simplicity, let's assume we can get it from the roster we fetched in openMatchDialog
+                                                                            // Find player name from the fetched roster
+                                                                            const player = allPlayers.find((p: any) => p.playerId === playerId);
+                                                                            const displayName = player ? player.playerUsername : playerId.slice(0, 8);
+
                                                                             return (
                                                                                 <div key={playerId} className="flex items-center justify-between">
-                                                                                    <Label className="text-xs truncate w-24">{playerId.slice(0, 8)}...</Label>
+                                                                                    <Label className="text-sm w-32 truncate" title={displayName}>{displayName}</Label>
                                                                                     <Input
                                                                                         type="number"
                                                                                         className="w-20"
