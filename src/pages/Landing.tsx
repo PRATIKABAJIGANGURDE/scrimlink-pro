@@ -19,6 +19,9 @@ const Landing = () => {
             <Link to="/rankings">
               <Button variant="ghost" size="sm">Rankings</Button>
             </Link>
+            <Link to="/results">
+              <Button variant="ghost" size="sm">Results</Button>
+            </Link>
             <Link to="/team/login">
               <Button variant="ghost" size="sm">Team Login</Button>
             </Link>

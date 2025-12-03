@@ -313,7 +313,8 @@ export const getMatchesByScrimId = async (scrimId: string): Promise<Match[]> => 
   const { data, error } = await supabase
     .from('matches')
     .select('*')
-    .eq('scrim_id', scrimId);
+    .eq('scrim_id', scrimId)
+    .order('match_number', { ascending: true });
 
   if (error) throw error;
   return data.map((m: any) => ({
@@ -324,6 +325,24 @@ export const getMatchesByScrimId = async (scrimId: string): Promise<Match[]> => 
     createdAt: m.created_at
   }));
 };
+
+export const getMatchResults = async (matchId: string) => {
+  const { data, error } = await supabase
+    .from('match_team_stats')
+    .select(`
+      *,
+      team:teams (
+        id,
+        name
+      )
+    `)
+    .eq('match_id', matchId)
+    .order('placement', { ascending: true });
+
+  if (error) throw error;
+  return data;
+};
+
 
 export const updateMatch = async (matchId: string, updates: Partial<Match>): Promise<void> => {
   const dbUpdates: any = { ...updates };
@@ -370,7 +389,7 @@ export const saveScrimTeam = async (scrimTeam: ScrimTeam): Promise<void> => {
 
 // Match Stats
 export const saveMatchTeamStats = async (stats: MatchTeamStats): Promise<void> => {
-  const { error } = await supabase.from('match_team_stats').insert({
+  const { error } = await supabase.from('match_team_stats').upsert({
     id: stats.id,
     match_id: stats.matchId,
     team_id: stats.teamId,
@@ -384,7 +403,7 @@ export const saveMatchTeamStats = async (stats: MatchTeamStats): Promise<void> =
 };
 
 export const saveMatchPlayerStats = async (stats: { id: string, matchId: string, playerId: string, teamId: string, kills: number }): Promise<void> => {
-  const { error } = await supabase.from('match_player_stats').insert({
+  const { error } = await supabase.from('match_player_stats').upsert({
     id: stats.id,
     match_id: stats.matchId,
     player_id: stats.playerId,
@@ -479,6 +498,40 @@ export const getPlayerStats = async (playerId: string) => {
   }));
 };
 
+export const getAllTeamStats = async () => {
+  const { data, error } = await supabase
+    .from('match_team_stats')
+    .select(`
+      *,
+      team:teams (
+        id,
+        name
+      )
+    `);
+
+  if (error) throw error;
+  return data;
+};
+
+export const getAllPlayerStats = async () => {
+  const { data, error } = await supabase
+    .from('match_player_stats')
+    .select(`
+      *,
+      player:players (
+        id,
+        username,
+        team_id
+      ),
+      team:teams (
+        name
+      )
+    `);
+
+  if (error) throw error;
+  return data;
+};
+
 // Auth Helpers
 export const signUpTeam = async (email: string, password: string, name: string, joinCode: string, country?: string) => {
   // 1. Sign up with Supabase Auth
@@ -518,7 +571,7 @@ export const signUpTeam = async (email: string, password: string, name: string, 
   return authData.user;
 };
 
-export const signUpPlayer = async (email: string, password: string, username: string, joinCode: string) => {
+export const signUpPlayer = async (email: string, password: string, username: string, joinCode: string, role?: string) => {
   // 1. Verify Join Code first
   const { data: team, error: teamError } = await supabase
     .from('teams')
@@ -545,7 +598,8 @@ export const signUpPlayer = async (email: string, password: string, username: st
       username,
       email,
       team_id: team.id,
-      status: 'pending'
+      status: 'pending',
+      role: role || null
     });
 
   if (profileError) throw profileError;

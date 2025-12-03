@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -28,6 +29,15 @@ import {
 import { Scrim, Match, Team, ScrimTeam, MatchTeamStats, Player } from "@/types";
 import { Trophy, Calendar, Users, Target, ArrowLeft, Plus, Save } from "lucide-react";
 
+const MAPS = [
+    "Bermuda",
+    "Purgatory",
+    "Kalahari",
+    "Solara",
+    "Alpine",
+    "NeXTerra"
+];
+
 const ScrimManagement = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -44,6 +54,7 @@ const ScrimManagement = () => {
 
     // Admin: Match Stats
     const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+    const [selectedMap, setSelectedMap] = useState<string>("");
     const [savingResults, setSavingResults] = useState(false);
     // Structure: { [teamId]: { placement: number, players: { [playerId]: kills } } }
     const [matchStats, setMatchStats] = useState<Record<string, { placement: number; players: Record<string, number> }>>({});
@@ -197,7 +208,11 @@ const ScrimManagement = () => {
             });
 
             await Promise.all(statsPromises);
-            await updateMatch(selectedMatch.id, { status: 'completed' });
+            await Promise.all(statsPromises);
+            await updateMatch(selectedMatch.id, {
+                status: 'completed',
+                mapName: selectedMap
+            });
 
             toast({ title: "Success", description: "Match results saved" });
             setSelectedMatch(null);
@@ -249,6 +264,7 @@ const ScrimManagement = () => {
 
     const openMatchDialog = async (match: Match) => {
         setSelectedMatch(match);
+        setSelectedMap(match.mapName || "");
         // Load roster for all teams to populate inputs
         const allScrimPlayers = await getScrimPlayers(id!);
         setAllPlayers(allScrimPlayers);
@@ -369,6 +385,20 @@ const ScrimManagement = () => {
                                                             <DialogDescription>Enter placement and kills for each player</DialogDescription>
                                                         </DialogHeader>
                                                         <div className="space-y-6 py-4">
+                                                            <div className="space-y-2">
+                                                                <Label>Map Selection</Label>
+                                                                <Select value={selectedMap} onValueChange={setSelectedMap}>
+                                                                    <SelectTrigger>
+                                                                        <SelectValue placeholder="Select Map" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {MAPS.map(map => (
+                                                                            <SelectItem key={map} value={map}>{map}</SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+
                                                             {scrimTeams.map((st) => (
                                                                 <div key={st.id} className="border p-4 rounded-lg">
                                                                     <div className="flex justify-between items-center mb-4">
