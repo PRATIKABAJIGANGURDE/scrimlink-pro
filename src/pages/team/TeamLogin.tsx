@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { signIn } from "@/lib/storage";
+import { signIn, getCurrentTeam } from "@/lib/storage";
 import { Trophy, ArrowLeft } from "lucide-react";
 
 const TeamLogin = () => {
@@ -23,11 +23,22 @@ const TeamLogin = () => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        navigate("/team/dashboard");
+        // Verify if the user is actually a team
+        const team = await getCurrentTeam();
+        if (team) {
+          navigate("/team/dashboard");
+        } else {
+          // User is logged in but not as a team (likely a player)
+          toast({
+            title: "Active Session Detected",
+            description: "You are currently logged in as a Player. Log in below to switch to a Team account.",
+            variant: "default"
+          });
+        }
       }
     };
     checkSession();
-  }, [navigate]);
+  }, [navigate, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +46,13 @@ const TeamLogin = () => {
 
     try {
       await signIn(formData.email, formData.password);
+
+      // Verify role immediately after login
+      const team = await getCurrentTeam();
+      if (!team) {
+        await supabase.auth.signOut();
+        throw new Error("This account is not registered as a Team.");
+      }
 
       toast({
         title: "Welcome back!",
