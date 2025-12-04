@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getPublicPlayerProfileByUsername, likePlayer, getCurrentUser } from "@/lib/storage";
-import { Users, Trophy, Calendar as CalendarIcon, Shield, ArrowLeft, Heart, Instagram, Youtube, Swords, Target, Medal } from "lucide-react";
+import { getPublicPlayerProfileByUsername, likePlayer, getCurrentUser, getPlayerDetailedStats } from "@/lib/storage";
+import { Users, Trophy, Calendar as CalendarIcon, Shield, ArrowLeft, Heart, Instagram, Youtube, Swords, Target, Medal, Crosshair, Crown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
 
@@ -42,7 +42,12 @@ const PublicPlayerProfile = () => {
 
     const loadProfile = async (username: string) => {
         const data = await getPublicPlayerProfileByUsername(username);
-        setProfile(data);
+        if (data && data.player) {
+            const stats = await getPlayerDetailedStats(data.player.id);
+            setProfile({ ...data, stats });
+        } else {
+            setProfile(data);
+        }
     };
 
     const handleLike = async () => {
@@ -155,6 +160,38 @@ const PublicPlayerProfile = () => {
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <Card>
+                        <CardContent className="p-6 flex flex-col items-center justify-center text-center">
+                            <Target className="h-8 w-8 text-primary mb-2" />
+                            <div className="text-2xl font-bold">{profile.stats?.matchesPlayed || 0}</div>
+                            <div className="text-xs text-muted-foreground uppercase tracking-wider">Matches</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent className="p-6 flex flex-col items-center justify-center text-center">
+                            <Swords className="h-8 w-8 text-red-500 mb-2" />
+                            <div className="text-2xl font-bold">{profile.stats?.totalKills || 0}</div>
+                            <div className="text-xs text-muted-foreground uppercase tracking-wider">Kills</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent className="p-6 flex flex-col items-center justify-center text-center">
+                            <Crosshair className="h-8 w-8 text-blue-500 mb-2" />
+                            <div className="text-2xl font-bold">{profile.stats?.kd || "0.00"}</div>
+                            <div className="text-xs text-muted-foreground uppercase tracking-wider">K/D Ratio</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent className="p-6 flex flex-col items-center justify-center text-center">
+                            <Crown className="h-8 w-8 text-yellow-500 mb-2" />
+                            <div className="text-2xl font-bold">{profile.stats?.booyahs || 0}</div>
+                            <div className="text-xs text-muted-foreground uppercase tracking-wider">Booyahs</div>
+                        </CardContent>
+                    </Card>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Current Team */}

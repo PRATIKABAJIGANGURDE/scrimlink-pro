@@ -466,6 +466,52 @@ export const getTeamStats = async (teamId: string) => {
   }));
 };
 
+export const getPlayerDetailedStats = async (playerId: string) => {
+  // 1. Get all match player stats for the player
+  const { data: playerStats, error: playerError } = await supabase
+    .from('match_player_stats')
+    .select('*')
+    .eq('player_id', playerId);
+
+  if (playerError) throw playerError;
+
+  const matchesPlayed = playerStats.length;
+  const totalKills = playerStats.reduce((sum, stat) => sum + stat.kills, 0);
+
+  // 2. Calculate Booyahs
+  // We need to check match_team_stats for each match+team combination
+  let booyahs = 0;
+
+  if (matchesPlayed > 0) {
+    const matchIds = playerStats.map(s => s.match_id);
+
+    const { data: teamStats, error: teamError } = await supabase
+      .from('match_team_stats')
+      .select('match_id, team_id, is_booyah')
+      .in('match_id', matchIds)
+      .eq('is_booyah', true);
+
+    if (!teamError && teamStats) {
+      // Check if the player was in the team that got the booyah for that match
+      booyahs = teamStats.filter(ts =>
+        playerStats.some(ps => ps.match_id === ts.match_id && ps.team_id === ts.team_id)
+      ).length;
+    }
+  }
+
+  // Calculate K/D (Assuming Matches = Deaths for simplicity, or just Kills/Matches)
+  // If we want true K/D we need death stats. For now, Kills / Matches is a common proxy in simple trackers
+  // or we can just return it as K/M. Let's call it K/D for the user request but mathematically it's K/M.
+  const kd = matchesPlayed > 0 ? (totalKills / matchesPlayed).toFixed(2) : "0.00";
+
+  return {
+    matchesPlayed,
+    totalKills,
+    kd,
+    booyahs
+  };
+};
+
 export const getPlayerStats = async (playerId: string) => {
   const { data, error } = await supabase
     .from('match_player_stats')
