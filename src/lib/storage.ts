@@ -1077,10 +1077,16 @@ export const joinTeam = async (playerId: string, joinCode: string) => {
 
   if (existingRequest) throw new Error("You have already requested to join this team");
 
+  // 2.5 Fetch player details
+  const player = await getPlayerById(playerId);
+  if (!player) throw new Error("Player not found");
+
   // 3. Create request
   await saveJoinRequest({
     id: generateId(),
     playerId,
+    playerUsername: player.username,
+    playerEmail: player.email,
     teamId: team.id,
     status: 'pending',
     createdAt: new Date().toISOString()
