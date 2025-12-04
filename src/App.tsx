@@ -19,7 +19,6 @@ import TeamStats from "./pages/team/TeamStats";
 import PlayerStats from "./pages/player/PlayerStats";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminLogin from "./pages/admin/AdminLogin";
-import AdminRegister from "./pages/admin/AdminRegister";
 import Rankings from "./pages/Rankings";
 import MatchResults from "./pages/MatchResults";
 
@@ -41,7 +40,6 @@ const App = () => (
           <Route path="/team/stats" element={<TeamStats />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin/register" element={<AdminRegister />} />
           <Route path="/player/register" element={<PlayerRegister />} />
           <Route path="/player/login" element={<PlayerLogin />} />
           <Route path="/player/dashboard" element={<PlayerDashboard />} />
