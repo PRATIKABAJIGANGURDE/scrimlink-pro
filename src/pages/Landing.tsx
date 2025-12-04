@@ -1,177 +1,172 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { Trophy, Users, Target, BarChart3, Shield, Zap } from "lucide-react";
+import { Trophy, Users, Target, BarChart3, Shield, Zap, Crosshair, Crown, ArrowRight } from "lucide-react";
 
 const Landing = () => {
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <header className="relative">
-        <nav className="container mx-auto px-4 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Navbar */}
+      <header className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center">
-              <Trophy className="h-5 w-5 text-primary-foreground" />
+            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+              <Trophy className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-xl font-semibold">ScrimHub</span>
+            <span className="text-xl font-bold tracking-tight">ScrimHub</span>
           </div>
-          <div className="flex flex-wrap justify-center gap-3">
-            <Link to="/rankings">
-              <Button variant="ghost" size="sm">Rankings</Button>
+          <div className="flex items-center gap-4">
+            <Link to="/rankings" className="text-sm font-medium hover:text-primary transition-colors hidden sm:block">
+              Rankings
             </Link>
-            <Link to="/results">
-              <Button variant="ghost" size="sm">Results</Button>
-            </Link>
-            <Link to="/team/login">
-              <Button variant="ghost" size="sm">Team Login</Button>
-            </Link>
-            <Link to="/player/login">
-              <Button size="sm">Player Login</Button>
+            <Link to="/match-results" className="text-sm font-medium hover:text-primary transition-colors hidden sm:block">
+              Results
             </Link>
             <Link to="/admin">
-              <Button variant="outline" size="sm">Admin</Button>
-            </Link>
-          </div>
-        </nav>
-
-        <div className="container mx-auto px-4 py-20 md:py-32 text-center max-w-4xl">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-            <Zap className="h-4 w-4" />
-            Professional Esports Management
-          </div>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight text-foreground">
-            Manage Your Free Fire
-            <span className="block text-primary">Scrims Like a Pro</span>
-          </h1>
-          <p className="text-lg text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-            The complete platform for competitive teams. Track matches, manage rosters, and climb the leaderboards with ease.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/team/register">
-              <Button size="lg" className="px-8 h-12 text-base">
-                Register Your Team
-              </Button>
-            </Link>
-            <Link to="/player/register">
-              <Button size="lg" variant="outline" className="px-8 h-12 text-base">
-                Join as Player
-              </Button>
+              <Button variant="ghost" size="sm">Admin</Button>
             </Link>
           </div>
         </div>
       </header>
 
-      {/* Features Section */}
-      <section className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">
-              Everything You Need
-            </h2>
-            <p className="text-muted-foreground max-w-lg mx-auto">
-              Built specifically for Free Fire Max competitive teams
-            </p>
+      <main className="flex-1">
+        {/* Hero Section - Split View */}
+        <section className="py-12 md:py-20 lg:py-32">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16 max-w-3xl mx-auto">
+              <h1 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight">
+                The Ultimate <span className="text-primary">Esports Platform</span>
+              </h1>
+              <p className="text-xl text-muted-foreground">
+                Whether you're a player looking to prove yourself or a team manager building a legacy, ScrimHub has the tools you need.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+              {/* Player Card */}
+              <Card className="relative overflow-hidden border-primary/20 hover:border-primary/50 transition-all duration-300 group">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                <CardHeader className="text-center pb-2">
+                  <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                    <Crosshair className="h-8 w-8 text-primary" />
+                  </div>
+                  <CardTitle className="text-3xl font-bold">For Players</CardTitle>
+                  <CardDescription className="text-lg">Prove your skills & join top teams</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6 text-center pt-6">
+                  <ul className="space-y-3 text-sm text-muted-foreground text-left max-w-xs mx-auto">
+                    <li className="flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-primary" />
+                      Track your personal stats & K/D
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Trophy className="h-4 w-4 text-primary" />
+                      Climb the global player rankings
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-primary" />
+                      Find and join competitive teams
+                    </li>
+                  </ul>
+                  <div className="flex flex-col gap-3 pt-4">
+                    <Link to="/player/login" className="w-full">
+                      <Button className="w-full text-lg h-12 group-hover:bg-primary/90">
+                        Player Login
+                        <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      </Button>
+                    </Link>
+                    <Link to="/player/register" className="w-full">
+                      <Button variant="outline" className="w-full">Create Player Account</Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Team Card */}
+              <Card className="relative overflow-hidden border-accent/20 hover:border-accent/50 transition-all duration-300 group">
+                <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                <CardHeader className="text-center pb-2">
+                  <div className="mx-auto h-16 w-16 rounded-full bg-accent/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                    <Shield className="h-8 w-8 text-accent" />
+                  </div>
+                  <CardTitle className="text-3xl font-bold">For Teams</CardTitle>
+                  <CardDescription className="text-lg">Manage rosters & dominate scrims</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6 text-center pt-6">
+                  <ul className="space-y-3 text-sm text-muted-foreground text-left max-w-xs mx-auto">
+                    <li className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-accent" />
+                      Manage roster & recruit players
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Target className="h-4 w-4 text-accent" />
+                      Host & participate in scrims
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-accent" />
+                      Analyze team performance stats
+                    </li>
+                  </ul>
+                  <div className="flex flex-col gap-3 pt-4">
+                    <Link to="/team/login" className="w-full">
+                      <Button className="w-full text-lg h-12 bg-accent hover:bg-accent/90 text-accent-foreground">
+                        Team Login
+                        <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      </Button>
+                    </Link>
+                    <Link to="/team/register" className="w-full">
+                      <Button variant="outline" className="w-full border-accent/20 hover:bg-accent/10 hover:text-accent">Register New Team</Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            <Card className="bg-card border-border/50 shadow-sm hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <Users className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">Team Management</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  Create teams, manage rosters, and approve players with secure join codes.
-                </p>
-              </CardContent>
-            </Card>
+        </section>
 
-            <Card className="bg-card border-border/50 shadow-sm hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <Target className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">Scrim Hosting</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  Create and manage scrims with multiple matches and invite teams easily.
-                </p>
-              </CardContent>
-            </Card>
+        {/* Features Grid */}
+        <section className="py-20 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold mb-4">Why Choose ScrimHub?</h2>
+              <p className="text-muted-foreground">Built for the competitive Free Fire community</p>
+            </div>
 
-            <Card className="bg-card border-border/50 shadow-sm hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <BarChart3 className="h-6 w-6 text-primary" />
+            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              <div className="flex flex-col items-center text-center p-6 rounded-lg bg-background border border-border/50 shadow-sm">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <Crown className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Live Leaderboards</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  Real-time rankings with official tie-breaker rules and detailed stats.
-                </p>
-              </CardContent>
-            </Card>
+                <h3 className="text-xl font-semibold mb-2">Global Rankings</h3>
+                <p className="text-muted-foreground">Compete against other teams and players to climb the official leaderboards.</p>
+              </div>
 
-            <Card className="bg-card border-border/50 shadow-sm hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <Trophy className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">Player Stats</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  Track individual performance with kill history and career statistics.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card border-border/50 shadow-sm hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <Shield className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">Secure Access</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  Team join codes and player approval system for full control.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card border-border/50 shadow-sm hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+              <div className="flex flex-col items-center text-center p-6 rounded-lg bg-background border border-border/50 shadow-sm">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                   <Zap className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Auto Calculations</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  Automatic point calculation and Booyah detection saves time.
-                </p>
-              </CardContent>
-            </Card>
+                <h3 className="text-xl font-semibold mb-2">Automated Scoring</h3>
+                <p className="text-muted-foreground">Instant point calculations and Booyah detection for all your matches.</p>
+              </div>
+
+              <div className="flex flex-col items-center text-center p-6 rounded-lg bg-background border border-border/50 shadow-sm">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <BarChart3 className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">Detailed Analytics</h3>
+                <p className="text-muted-foreground">In-depth statistics for every match, player, and team to help you improve.</p>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
-      {/* CTA Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-4">
-            Ready to Start?
-          </h2>
-          <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-            Join teams already using ScrimHub for their competitive matches
-          </p>
-          <Link to="/team/register">
-            <Button size="lg" className="px-10 h-12">
-              Get Started Free
-            </Button>
-          </Link>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="py-8 border-t border-border">
+      <footer className="py-8 border-t border-border mt-auto">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© 2024 ScrimHub. Built for competitive Free Fire Max.</p>
+          <p>© 2024 ScrimHub. The professional choice for esports management.</p>
         </div>
       </footer>
-    </div >
+    </div>
   );
 };
 
