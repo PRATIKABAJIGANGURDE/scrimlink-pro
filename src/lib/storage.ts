@@ -534,39 +534,23 @@ export const getAllPlayerStats = async () => {
 
 // Auth Helpers
 export const signUpTeam = async (email: string, password: string, name: string, joinCode: string, country?: string) => {
-  // 1. Sign up with Supabase Auth
+  // 1. Sign up with Supabase Auth and pass metadata for the trigger
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      emailRedirectTo: `${window.location.origin}/team/login`,
+      data: {
+        type: 'team',
+        name,
+        joinCode,
+        country
+      }
+    }
   });
 
   if (authError) throw authError;
   if (!authData.user) throw new Error("No user returned from signup");
-
-  console.log("SignUp successful. User:", authData.user.id);
-  console.log("Session:", authData.session ? "Active" : "Null (Email confirmation likely required)");
-
-  if (!authData.session) {
-    throw new Error("Please disable 'Confirm Email' in Supabase Auth settings to allow immediate login.");
-  }
-
-  // 2. Create Team Profile
-  const { error: profileError } = await supabase
-    .from('teams')
-    .insert({
-      id: authData.user.id,
-      name,
-      email,
-      join_code: joinCode,
-      country,
-      logo_url: `https://api.dicebear.com/7.x/initials/svg?seed=${name}`
-    });
-
-  if (profileError) {
-    // Cleanup auth user if profile creation fails (optional but good practice)
-    // await supabase.auth.admin.deleteUser(authData.user.id); 
-    throw profileError;
-  }
 
   return authData.user;
 };
@@ -581,39 +565,23 @@ export const signUpPlayer = async (email: string, password: string, username: st
 
   if (teamError || !team) throw new Error("Invalid join code");
 
-  // 2. Sign up with Supabase Auth
+  // 2. Sign up with Supabase Auth and pass metadata for the trigger
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      emailRedirectTo: `${window.location.origin}/player/login`,
+      data: {
+        type: 'player',
+        username,
+        teamId: team.id,
+        role: role || null
+      }
+    }
   });
 
   if (authError) throw authError;
   if (!authData.user) throw new Error("No user returned from signup");
-
-  // 3. Create Player Profile
-  const { error: profileError } = await supabase
-    .from('players')
-    .insert({
-      id: authData.user.id,
-      username,
-      email,
-      team_id: team.id,
-      status: 'pending',
-      role: role || null
-    });
-
-  if (profileError) throw profileError;
-
-  // 4. Create Join Request
-  const { error: requestError } = await supabase
-    .from('join_requests')
-    .insert({
-      player_id: authData.user.id,
-      team_id: team.id,
-      status: 'pending'
-    });
-
-  if (requestError) throw requestError;
 
   return authData.user;
 };
@@ -624,6 +592,12 @@ export const signIn = async (email: string, password: string) => {
     password,
   });
   if (error) throw error;
+
+  if (data.user && !data.user.email_confirmed_at) {
+    await supabase.auth.signOut();
+    throw new Error("Please verify your email address before logging in.");
+  }
+
   return data.user;
 };
 
@@ -753,6 +727,7 @@ export const deleteScrimPlayer = async (scrimId: string, playerId: string) => {
 
 // Utility
 export const generateId = (): string => crypto.randomUUID();
+
 export const generateJoinCode = (): string => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let code = '';
@@ -760,4 +735,15 @@ export const generateJoinCode = (): string => {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return code;
+};
+
+export const verifyEmailOTP = async (email: string, token: string) => {
+  const { data, error } = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: 'signup'
+  });
+
+  if (error) throw error;
+  return data;
 };

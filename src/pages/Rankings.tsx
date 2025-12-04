@@ -91,27 +91,27 @@ const Rankings = () => {
     };
 
     return (
-        <div className="min-h-screen bg-background p-4 md:p-8">
-            <div className="max-w-6xl mx-auto space-y-8">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="min-h-screen bg-background">
+            <header className="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-6xl z-50 rounded-xl border border-border/40 bg-background/70 backdrop-blur-md shadow-sm">
+                <div className="container mx-auto px-4 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Button variant="ghost" onClick={() => navigate(-1)}>
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back
+                        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+                            <ArrowLeft className="h-4 w-4 md:mr-2" />
+                            <span className="hidden md:inline">Back</span>
                         </Button>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-                                <Crown className="h-8 w-8 text-primary" />
-                                Global Rankings
-                            </h1>
-                            <p className="text-muted-foreground text-sm">Top performing teams and players</p>
+                        <div className="flex items-center gap-2">
+                            <Crown className="h-6 w-6 text-primary" />
+                            <h1 className="text-lg font-bold">Global Rankings</h1>
                         </div>
                     </div>
                     <Button variant="outline" size="sm" onClick={() => navigate("/match-results")}>
-                        <Target className="h-4 w-4 mr-2" />
-                        Match Results
+                        <Target className="h-4 w-4 md:mr-2" />
+                        <span className="hidden md:inline">Match Results</span>
                     </Button>
                 </div>
+            </header>
+
+            <main className="container mx-auto px-4 pt-24 pb-8 max-w-6xl space-y-8">
 
                 {error && (
                     <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-md mb-6">
@@ -236,8 +236,8 @@ const Rankings = () => {
                                         <div className="text-center py-8">No player data available</div>
                                     ) : (
                                         playerRankings.map((player, index) => (
-                                            <div key={player.id} className="flex flex-col gap-2 p-4 bg-muted/50 rounded-lg border border-border">
-                                                <div className="flex items-center justify-between">
+                                            <div key={player.id} className="flex flex-col gap-3 p-4 bg-muted/50 rounded-lg border border-border">
+                                                <div className="flex items-start justify-between w-full">
                                                     <div className="flex items-center gap-3">
                                                         <div className="flex items-center justify-center w-8 h-8">
                                                             {getRankIcon(index)}
@@ -249,23 +249,24 @@ const Rankings = () => {
                                                             </AvatarFallback>
                                                         </Avatar>
                                                         <div>
-                                                            <div className="font-bold text-lg">{player.username}</div>
+                                                            <div className="font-bold text-lg break-all">{player.username}</div>
                                                             <div className="text-xs text-muted-foreground">{player.teamName}</div>
                                                         </div>
                                                     </div>
-                                                    <div className="text-right">
-                                                        <span className="block font-bold text-xl">{player.kills}</span>
-                                                        <span className="text-xs text-muted-foreground">Kills</span>
-                                                    </div>
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground border-t border-border/50 pt-2 mt-1">
+
+                                                <div className="grid grid-cols-3 gap-2 border-t border-border/50 pt-3">
                                                     <div className="text-center">
-                                                        <span className="block font-semibold text-foreground">{player.matches}</span>
-                                                        Matches
+                                                        <span className="block font-bold text-xl">{player.kills}</span>
+                                                        <span className="text-xs text-muted-foreground">Total Kills</span>
                                                     </div>
                                                     <div className="text-center">
-                                                        <span className="block font-semibold text-foreground">{(player.kills / (player.matches || 1)).toFixed(1)}</span>
-                                                        Avg Kills
+                                                        <span className="block font-bold text-xl">{player.matches}</span>
+                                                        <span className="text-xs text-muted-foreground">Matches</span>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <span className="block font-bold text-xl">{(player.kills / (player.matches || 1)).toFixed(1)}</span>
+                                                        <span className="text-xs text-muted-foreground">Avg Kills</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -326,8 +327,8 @@ const Rankings = () => {
                         </Card>
                     </TabsContent>
                 </Tabs>
-            </div >
-        </div >
+            </main>
+        </div>
     );
 };
 

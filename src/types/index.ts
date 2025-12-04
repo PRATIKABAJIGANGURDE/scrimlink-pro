@@ -6,6 +6,7 @@ export interface Team {
   logoUrl?: string;
   joinCode: string;
   country?: string;
+  isVerified?: boolean;
   createdAt: string;
 }
 
@@ -18,6 +19,7 @@ export interface Player {
   status: 'pending' | 'approved' | 'rejected';
   role?: 'IGL' | 'Rusher' | 'Sniper' | 'Supporter' | 'Flanker';
   profileUrl?: string;
+  isVerified?: boolean;
   createdAt: string;
 }
 

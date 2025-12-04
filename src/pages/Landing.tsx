@@ -2,34 +2,29 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { Trophy, Users, Target, BarChart3, Shield, Zap, Crosshair, Crown, ArrowRight } from "lucide-react";
+import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
 
 const Landing = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Navbar */}
-      <header className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-              <Trophy className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold tracking-tight">ScrimHub</span>
+      <ResponsiveNavbar
+        title="ScrimHub"
+        icon={
+          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+            <Trophy className="h-4 w-4 text-primary-foreground" />
           </div>
-          <div className="flex items-center gap-4">
-            <Link to="/rankings" className="text-sm font-medium hover:text-primary transition-colors hidden sm:block">
-              Rankings
-            </Link>
-            <Link to="/match-results" className="text-sm font-medium hover:text-primary transition-colors hidden sm:block">
-              Results
-            </Link>
-            <Link to="/admin">
-              <Button variant="ghost" size="sm">Admin</Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+        }
+      >
+        <Link to="/rankings" className="text-sm font-medium hover:text-primary transition-colors">
+          Rankings
+        </Link>
+        <Link to="/match-results" className="text-sm font-medium hover:text-primary transition-colors">
+          Results
+        </Link>
+      </ResponsiveNavbar>
 
-      <main className="flex-1">
+      <main className="flex-1 pt-24">
         {/* Hero Section - Split View */}
         <section className="py-12 md:py-20 lg:py-32">
           <div className="container mx-auto px-4">
@@ -69,25 +64,27 @@ const Landing = () => {
                     </li>
                   </ul>
                   <div className="flex flex-col gap-3 pt-4">
-                    <Link to="/player/login" className="w-full">
+                    <Link to="/player/register" className="w-full">
                       <Button className="w-full text-lg h-12 group-hover:bg-primary/90">
-                        Player Login
+                        Create Player Account
                         <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                       </Button>
                     </Link>
-                    <Link to="/player/register" className="w-full">
-                      <Button variant="outline" className="w-full">Create Player Account</Button>
+                    <Link to="/player/login" className="w-full">
+                      <Button variant="outline" className="w-full">
+                        Player Login
+                      </Button>
                     </Link>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Team Card */}
-              <Card className="relative overflow-hidden border-accent/20 hover:border-accent/50 transition-all duration-300 group">
-                <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+              <Card className="relative overflow-hidden border-violet-500/20 hover:border-violet-500/50 transition-all duration-300 group">
+                <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                 <CardHeader className="text-center pb-2">
-                  <div className="mx-auto h-16 w-16 rounded-full bg-accent/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                    <Shield className="h-8 w-8 text-accent" />
+                  <div className="mx-auto h-16 w-16 rounded-full bg-violet-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                    <Shield className="h-8 w-8 text-violet-500" />
                   </div>
                   <CardTitle className="text-3xl font-bold">For Teams</CardTitle>
                   <CardDescription className="text-lg">Manage rosters & dominate scrims</CardDescription>
@@ -95,27 +92,29 @@ const Landing = () => {
                 <CardContent className="space-y-6 text-center pt-6">
                   <ul className="space-y-3 text-sm text-muted-foreground text-left max-w-xs mx-auto">
                     <li className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-accent" />
+                      <Users className="h-4 w-4 text-violet-500" />
                       Manage roster & recruit players
                     </li>
                     <li className="flex items-center gap-2">
-                      <Target className="h-4 w-4 text-accent" />
-                      Host & participate in scrims
+                      <Target className="h-4 w-4 text-violet-500" />
+                      Participate in scrims
                     </li>
                     <li className="flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 text-accent" />
-                      Analyze team performance stats
+                      <BarChart3 className="h-4 w-4 text-violet-500" />
+                      Analyze team performance
                     </li>
                   </ul>
                   <div className="flex flex-col gap-3 pt-4">
-                    <Link to="/team/login" className="w-full">
-                      <Button className="w-full text-lg h-12 bg-accent hover:bg-accent/90 text-accent-foreground">
-                        Team Login
+                    <Link to="/team/register" className="w-full">
+                      <Button className="w-full text-lg h-12 bg-violet-500 hover:bg-violet-600 text-white">
+                        Register New Team
                         <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                       </Button>
                     </Link>
-                    <Link to="/team/register" className="w-full">
-                      <Button variant="outline" className="w-full border-accent/20 hover:bg-accent/10 hover:text-accent">Register New Team</Button>
+                    <Link to="/team/login" className="w-full">
+                      <Button variant="outline" className="w-full border-violet-500/20 hover:bg-violet-500/10 hover:text-violet-500">
+                        Team Login
+                      </Button>
                     </Link>
                   </div>
                 </CardContent>

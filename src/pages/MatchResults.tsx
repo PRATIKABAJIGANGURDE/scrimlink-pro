@@ -74,27 +74,27 @@ const MatchResults = () => {
     const selectedMatch = matches.find(m => m.id === selectedMatchId);
 
     return (
-        <div className="min-h-screen bg-background p-4 md:p-8">
-            <div className="max-w-6xl mx-auto space-y-8">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="min-h-screen bg-background">
+            <header className="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-6xl z-50 rounded-xl border border-border/40 bg-background/70 backdrop-blur-md shadow-sm">
+                <div className="container mx-auto px-4 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Button variant="ghost" onClick={() => navigate(-1)}>
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back
+                        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+                            <ArrowLeft className="h-4 w-4 md:mr-2" />
+                            <span className="hidden md:inline">Back</span>
                         </Button>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-                                <Trophy className="h-8 w-8 text-primary" />
-                                Match Results
-                            </h1>
-                            <p className="text-muted-foreground text-sm">Detailed scoreboards for every match</p>
+                        <div className="flex items-center gap-2">
+                            <Trophy className="h-6 w-6 text-primary" />
+                            <h1 className="text-lg font-bold">Match Results</h1>
                         </div>
                     </div>
                     <Button variant="outline" size="sm" onClick={() => navigate("/rankings")}>
-                        <Crown className="h-4 w-4 mr-2" />
-                        Rankings
+                        <Crown className="h-4 w-4 md:mr-2" />
+                        <span className="hidden md:inline">Rankings</span>
                     </Button>
                 </div>
+            </header>
+
+            <main className="container mx-auto px-4 pt-24 pb-8 max-w-6xl space-y-8">
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Sidebar / Filters */}
@@ -240,7 +240,7 @@ const MatchResults = () => {
                         </CardContent>
                     </Card>
                 </div>
-            </div>
+            </main>
         </div>
     );
 };

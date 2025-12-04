@@ -76,6 +76,7 @@ const PlayerDashboard = () => {
       <ResponsiveNavbar
         title={player.username}
         subtitle="Player Dashboard"
+        variant="default"
         icon={<Users className="h-8 w-8 text-primary" />}
       >
         <Button variant="outline" size="sm" onClick={() => navigate("/player/profile")}>
@@ -96,7 +97,7 @@ const PlayerDashboard = () => {
         </Button>
       </ResponsiveNavbar>
 
-      <main className="container mx-auto px-4 py-4 md:py-8">
+      <main className="container mx-auto px-4 py-8">
         {/* Status Card */}
         {isPending && (
           <Card className="mb-8 border-accent/50 bg-accent/5">
@@ -116,8 +117,6 @@ const PlayerDashboard = () => {
             </CardContent>
           </Card>
         )}
-
-        {/* Stats Summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
           <Card>
             <CardContent className="p-6">
@@ -174,22 +173,24 @@ const PlayerDashboard = () => {
         </div>
 
         {/* Team Info */}
-        {isApproved && team && (
-          <Card className="mb-8">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Trophy className="h-8 w-8 text-primary" />
+        {
+          isApproved && team && (
+            <Card className="mb-8">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
+                    <Trophy className="h-8 w-8 text-primary" />
+                  </div>
+                  <div>
+                    <Badge variant="secondary" className="mb-1">Team Member</Badge>
+                    <h2 className="text-2xl font-bold">{team.name}</h2>
+                    {team.country && <p className="text-sm text-muted-foreground">{team.country}</p>}
+                  </div>
                 </div>
-                <div>
-                  <Badge variant="secondary" className="mb-1">Team Member</Badge>
-                  <h2 className="text-2xl font-bold">{team.name}</h2>
-                  {team.country && <p className="text-sm text-muted-foreground">{team.country}</p>}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          )
+        }
 
 
 
@@ -237,8 +238,8 @@ const PlayerDashboard = () => {
             )}
           </CardContent>
         </Card>
-      </main>
-    </div>
+      </main >
+    </div >
   );
 };
 

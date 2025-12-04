@@ -151,7 +151,7 @@ const AdminDashboard = () => {
                 </Button>
             </ResponsiveNavbar>
 
-            <main className="container mx-auto px-4 py-8">
+            <main className="container mx-auto px-4 pt-24 pb-8">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>

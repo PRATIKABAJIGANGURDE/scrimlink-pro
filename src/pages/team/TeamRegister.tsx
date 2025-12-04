@@ -6,16 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { signUpTeam, generateJoinCode } from "@/lib/storage";
-import { Trophy, ArrowLeft, Copy, Check } from "lucide-react";
-import { Team } from "@/types";
+import { Trophy, ArrowLeft, Check } from "lucide-react";
 
 const TeamRegister = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [joinCode, setJoinCode] = useState("");
-  const [copied, setCopied] = useState(false);
 
   const [formData, setFormData] = useState({
     teamName: "",
@@ -59,8 +56,11 @@ const TeamRegister = () => {
         formData.country
       );
 
-      setJoinCode(code);
       setShowSuccess(true);
+      toast({
+        title: "Registration successful!",
+        description: "Please check your email to verify your account.",
+      });
     } catch (error: any) {
       console.error(error);
       toast({
@@ -73,41 +73,26 @@ const TeamRegister = () => {
     }
   };
 
-  const copyCode = () => {
-    navigator.clipboard.writeText(joinCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast({
-      title: "Copied!",
-      description: "Join code copied to clipboard",
-    });
-  };
-
   if (showSuccess) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <Check className="h-8 w-8 text-primary" />
+        <Card className="w-full max-w-md text-center">
+          <CardHeader>
+            <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
+              <Check className="h-6 w-6 text-green-600" />
             </div>
-            <CardTitle className="text-2xl">Team Created!</CardTitle>
+            <CardTitle className="text-2xl">Registration Successful!</CardTitle>
             <CardDescription>
-              Share this code with your players so they can join your team
+              We've sent a verification link to <strong>{formData.email}</strong>
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="p-4 bg-muted rounded-lg text-center">
-              <p className="text-sm text-muted-foreground mb-2">Team Join Code</p>
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-3xl font-mono font-bold tracking-widest">{joinCode}</span>
-                <Button variant="ghost" size="icon" onClick={copyCode}>
-                  {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
-                </Button>
-              </div>
-            </div>
-            <Button className="w-full" onClick={() => navigate(`/player/register?code=${joinCode}&role=IGL`)}>
-              Create IGL Profile
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Please check your email and click the link to activate your account.
+              Once verified, you will be redirected to your dashboard.
+            </p>
+            <Button className="w-full" variant="outline" onClick={() => navigate("/team/login")}>
+              Go to Login
             </Button>
           </CardContent>
         </Card>

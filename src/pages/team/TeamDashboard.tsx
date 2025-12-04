@@ -188,6 +188,7 @@ const TeamDashboard = () => {
       <ResponsiveNavbar
         title={team.name}
         subtitle="Team Dashboard"
+        variant="default"
         icon={<Trophy className="h-8 w-8 text-primary" />}
       >
         <Button variant="outline" size="sm" onClick={() => navigate("/rankings")}>
@@ -204,7 +205,7 @@ const TeamDashboard = () => {
         </Button>
       </ResponsiveNavbar>
 
-      <main className="container mx-auto px-4 py-4 md:py-8">
+      <main className="container mx-auto px-4 py-8">
         {/* Join Code Card */}
         <Card className="mb-8">
           <CardContent className="p-6">
@@ -223,7 +224,6 @@ const TeamDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Stats Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
           <Card>
             <CardContent className="p-6">

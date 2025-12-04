@@ -6,17 +6,15 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { signUpPlayer, getTeamByJoinCode, setCurrentPlayer } from "@/lib/storage";
-import { Users, ArrowLeft, Clock } from "lucide-react";
-import { Player, JoinRequest } from "@/types";
+import { signUpPlayer } from "@/lib/storage";
+import { Users, ArrowLeft, Check } from "lucide-react";
 
 const PlayerRegister = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [showPending, setShowPending] = useState(false);
-  const [teamName, setTeamName] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const [formData, setFormData] = useState({
     username: "",
@@ -63,7 +61,7 @@ const PlayerRegister = () => {
     }
 
     try {
-      const user = await signUpPlayer(
+      await signUpPlayer(
         formData.email,
         formData.password,
         formData.username,
@@ -71,13 +69,11 @@ const PlayerRegister = () => {
         formData.role
       );
 
-      // We need to fetch the team name to display in the success message
-      // This is a bit redundant but ensures we have the correct team name
-      // In a real app, signUpPlayer could return { user, team }
-      const team = await getTeamByJoinCode(formData.joinCode.toUpperCase());
-      if (team) setTeamName(team.name);
-
-      setShowPending(true);
+      setShowSuccess(true);
+      toast({
+        title: "Registration successful!",
+        description: "Please check your email to verify your account.",
+      });
     } catch (error: any) {
       console.error(error);
       toast({
@@ -90,28 +86,26 @@ const PlayerRegister = () => {
     }
   };
 
-
-  if (showPending) {
+  if (showSuccess) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <Clock className="h-8 w-8 text-primary" />
+        <Card className="w-full max-w-md text-center">
+          <CardHeader>
+            <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
+              <Check className="h-6 w-6 text-green-600" />
             </div>
-            <CardTitle className="text-2xl">Request Sent!</CardTitle>
+            <CardTitle className="text-2xl">Registration Successful!</CardTitle>
             <CardDescription>
-              Your request to join <span className="font-semibold text-foreground">{teamName}</span> has been sent
+              We've sent a verification link to <strong>{formData.email}</strong>
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="p-4 bg-muted rounded-lg text-center">
-              <p className="text-sm text-muted-foreground">
-                The team captain (IGL) will review your request. You'll be notified once approved.
-              </p>
-            </div>
-            <Button className="w-full" onClick={() => navigate("/player/dashboard")}>
-              Go to Dashboard
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Please check your email and click the link to activate your account.
+              Once verified, you will be redirected to your dashboard.
+            </p>
+            <Button className="w-full" variant="outline" onClick={() => navigate("/player/login")}>
+              Go to Login
             </Button>
           </CardContent>
         </Card>

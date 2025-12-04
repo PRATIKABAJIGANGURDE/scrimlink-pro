@@ -74,11 +74,11 @@ const TeamStats = () => {
         <div className="min-h-screen bg-background p-8">
             <div className="max-w-6xl mx-auto space-y-8">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" onClick={() => navigate("/team/dashboard")}>
-                        <ArrowLeft className="h-4 w-4 mr-2" />
-                        Back to Dashboard
+                    <Button variant="ghost" onClick={() => navigate("/team/dashboard")} className="pl-0 md:pl-4">
+                        <ArrowLeft className="h-4 w-4 md:mr-2" />
+                        <span className="hidden md:inline">Back to Dashboard</span>
                     </Button>
-                    <h1 className="text-3xl font-bold">Team Statistics</h1>
+                    <h1 className="text-2xl md:text-3xl font-bold">Team Statistics</h1>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -133,17 +133,17 @@ const TeamStats = () => {
                         ) : (
                             <div className="space-y-4">
                                 {stats.map((stat) => (
-                                    <div key={stat.id} className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
+                                    <div key={stat.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-muted rounded-lg border border-border gap-4">
                                         <div>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 flex-wrap">
                                                 <span className="font-semibold">{stat.match.scrimName}</span>
-                                                <span className="text-muted-foreground text-sm">- Match {stat.match.matchNumber}</span>
+                                                <span className="text-muted-foreground text-sm whitespace-nowrap">- Match {stat.match.matchNumber}</span>
                                             </div>
                                             <div className="text-sm text-muted-foreground mt-1">
                                                 {new Date(stat.match.createdAt).toLocaleDateString()} • {stat.match.mapName || "Unknown Map"}
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-6">
+                                        <div className="grid grid-cols-3 gap-4 w-full md:w-auto md:flex md:gap-6 border-t md:border-t-0 border-border/50 pt-4 md:pt-0">
                                             <div className="text-center">
                                                 <div className="text-xs text-muted-foreground uppercase">Placement</div>
                                                 <div className="font-bold text-lg">#{stat.placement}</div>
@@ -157,9 +157,11 @@ const TeamStats = () => {
                                                 <div className="font-bold text-lg text-primary">{stat.totalPoints}</div>
                                             </div>
                                             {stat.isBooyah && (
-                                                <Badge variant="default" className="bg-yellow-500 hover:bg-yellow-600">
-                                                    BOOYAH!
-                                                </Badge>
+                                                <div className="col-span-3 md:col-span-1 flex justify-center md:block">
+                                                    <Badge variant="default" className="bg-yellow-500 hover:bg-yellow-600">
+                                                        BOOYAH!
+                                                    </Badge>
+                                                </div>
                                             )}
                                         </div>
                                     </div>

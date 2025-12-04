@@ -8,13 +8,18 @@ interface ResponsiveNavbarProps {
     subtitle?: string;
     icon?: React.ReactNode;
     children: React.ReactNode;
+    variant?: "floating" | "default";
 }
 
-export const ResponsiveNavbar = ({ title, subtitle, icon, children }: ResponsiveNavbarProps) => {
+export const ResponsiveNavbar = ({ title, subtitle, icon, children, variant = "floating" }: ResponsiveNavbarProps) => {
     const [open, setOpen] = useState(false);
 
+    const headerClass = variant === "floating"
+        ? "fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-6xl z-50 rounded-xl border border-border/40 bg-background/70 backdrop-blur-md shadow-sm"
+        : "sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60";
+
     return (
-        <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+        <header className={headerClass}>
             <div className="container mx-auto px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     {icon}
@@ -25,7 +30,7 @@ export const ResponsiveNavbar = ({ title, subtitle, icon, children }: Responsive
                 </div>
 
                 {/* Desktop Nav */}
-                <div className="hidden md:flex items-center gap-2">
+                <div className="hidden md:flex items-center gap-6">
                     {children}
                 </div>
 
