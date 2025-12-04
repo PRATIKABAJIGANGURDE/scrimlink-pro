@@ -168,6 +168,8 @@ const TeamDashboard = () => {
   const handleApprove = async (request: JoinRequest) => {
     try {
       await updateJoinRequest(request.id, 'approved');
+      await updatePlayer(request.playerId, { status: 'approved' });
+
       toast({
         title: "Success",
         description: "Player approved successfully",
