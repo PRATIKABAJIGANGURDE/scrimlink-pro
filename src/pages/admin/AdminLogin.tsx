@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { signIn } from "@/lib/storage";
+import { signIn, getAdmin } from "@/lib/storage";
+import { supabase } from "@/lib/supabase";
 import { Shield, ArrowLeft } from "lucide-react";
 
 const AdminLogin = () => {
@@ -17,6 +18,30 @@ const AdminLogin = () => {
         email: "",
         password: "",
     });
+
+    useEffect(() => {
+        const checkSession = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user) {
+                    const admin = await getAdmin(session.user.id);
+                    if (admin) {
+                        navigate("/admin");
+                    } else {
+                        // Logged in but not admin
+                        toast({
+                            title: "Access Denied",
+                            description: "You are logged in but not as an admin.",
+                            variant: "destructive"
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error("Session check failed", error);
+            }
+        };
+        checkSession();
+    }, [navigate, toast]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

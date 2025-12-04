@@ -1,10 +1,63 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Trophy, Users, Target, BarChart3, Shield, Zap, Crosshair, Crown, ArrowRight } from "lucide-react";
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
+import { getCurrentUser, getCurrentPlayer, getCurrentTeam, getAdmin } from "@/lib/storage";
+import { useToast } from "@/hooks/use-toast";
 
 const Landing = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!user) return;
+
+        // Check if Player
+        const player = await getCurrentPlayer();
+        if (player) {
+          toast({
+            title: "Welcome back!",
+            description: `Logged in as ${player.username}`,
+          });
+          navigate("/player/dashboard");
+          return;
+        }
+
+        // Check if Team
+        const team = await getCurrentTeam();
+        if (team) {
+          toast({
+            title: "Welcome back!",
+            description: `Logged in as ${team.name}`,
+          });
+          navigate("/team/dashboard");
+          return;
+        }
+
+        // Check if Admin
+        const admin = await getAdmin(user.id);
+        if (admin) {
+          toast({
+            title: "Welcome back!",
+            description: "Logged in as Admin",
+          });
+          navigate("/admin");
+          return;
+        }
+
+      } catch (error) {
+        console.error("Session check failed:", error);
+      }
+    };
+
+    checkSession();
+  }, [navigate, toast]);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Navbar */}

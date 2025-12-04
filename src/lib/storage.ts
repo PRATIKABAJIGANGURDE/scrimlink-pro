@@ -555,15 +555,20 @@ export const signUpTeam = async (email: string, password: string, name: string, 
   return authData.user;
 };
 
-export const signUpPlayer = async (email: string, password: string, username: string, joinCode: string, role?: string) => {
-  // 1. Verify Join Code first
-  const { data: team, error: teamError } = await supabase
-    .from('teams')
-    .select('id')
-    .eq('join_code', joinCode)
-    .single();
+export const signUpPlayer = async (email: string, password: string, username: string, joinCode?: string, role?: string) => {
+  let teamId = null;
 
-  if (teamError || !team) throw new Error("Invalid join code");
+  // 1. Verify Join Code if provided
+  if (joinCode) {
+    const { data: team, error: teamError } = await supabase
+      .from('teams')
+      .select('id')
+      .eq('join_code', joinCode)
+      .single();
+
+    if (teamError || !team) throw new Error("Invalid join code");
+    teamId = team.id;
+  }
 
   // 2. Sign up with Supabase Auth and pass metadata for the trigger
   const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -574,7 +579,7 @@ export const signUpPlayer = async (email: string, password: string, username: st
       data: {
         type: 'player',
         username,
-        teamId: team.id,
+        teamId: teamId,
         role: role || null
       }
     }
@@ -646,6 +651,8 @@ export const getCurrentPlayer = async () => {
   return {
     ...data,
     teamId: data.team_id,
+    instagramUrl: data.instagram_url,
+    youtubeUrl: data.youtube_url,
     createdAt: data.created_at
   };
 };
@@ -726,7 +733,17 @@ export const deleteScrimPlayer = async (scrimId: string, playerId: string) => {
 };
 
 // Utility
-export const generateId = (): string => crypto.randomUUID();
+export const generateId = (): string => {
+  // Fallback for environments where crypto.randomUUID is not available
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
 
 export const generateJoinCode = (): string => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -746,4 +763,291 @@ export const verifyEmailOTP = async (email: string, token: string) => {
 
   if (error) throw error;
   return data;
+};
+
+// Player Profile Enhancements
+
+export const leaveTeam = async (playerId: string, teamId: string) => {
+  // 1. Update player status
+  const { error: playerError } = await supabase
+    .from('players')
+    .update({
+      team_id: null,
+      status: 'pending',
+      role: null
+    })
+    .eq('id', playerId);
+
+  if (playerError) throw playerError;
+
+  // 2. Record in history (update the latest open record or insert a new closed one if none exists)
+  // Since we just started tracking, we might not have an open record.
+  // Strategy: Try to update a record with team_id and null left_at. If none, insert one with joined_at=now (approx) and left_at=now.
+
+  const { data: openRecord, error: fetchError } = await supabase
+    .from('player_team_history')
+    .select('id')
+    .eq('player_id', playerId)
+    .eq('team_id', teamId)
+    .is('left_at', null)
+    .single();
+
+  if (openRecord) {
+    await supabase
+      .from('player_team_history')
+      .update({ left_at: new Date().toISOString() })
+      .eq('id', openRecord.id);
+  } else {
+    // No open record found (legacy membership), just record the leave event?
+    // Or maybe insert a record with joined_at = created_at of player? No, that's messy.
+    // Let's just insert a record indicating they left now.
+    await supabase.from('player_team_history').insert({
+      player_id: playerId,
+      team_id: teamId,
+      joined_at: new Date().toISOString(), // Fallback
+      left_at: new Date().toISOString()
+    });
+  }
+};
+
+export const approveJoinRequest = async (requestId: string) => {
+  // 1. Get request details
+  const { data: request, error: reqError } = await supabase
+    .from('join_requests')
+    .select('*')
+    .eq('id', requestId)
+    .single();
+
+  if (reqError || !request) throw new Error("Request not found");
+
+  // 2. Update request status
+  const { error: updateReqError } = await supabase
+    .from('join_requests')
+    .update({ status: 'approved' })
+    .eq('id', requestId);
+
+  if (updateReqError) throw updateReqError;
+
+  // 3. Update player status
+  const { error: updatePlayerError } = await supabase
+    .from('players')
+    .update({
+      team_id: request.team_id,
+      status: 'approved',
+      role: 'member' // Default role
+    })
+    .eq('id', request.player_id);
+
+  if (updatePlayerError) throw updatePlayerError;
+
+  // 4. Record in history
+  await supabase.from('player_team_history').insert({
+    player_id: request.player_id,
+    team_id: request.team_id,
+    joined_at: new Date().toISOString()
+  });
+};
+
+export const likePlayer = async (targetPlayerId: string) => {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Must be logged in to like");
+
+  // Check if already liked in last 24h
+  const { data: existingLike, error: fetchError } = await supabase
+    .from('player_likes')
+    .select('*')
+    .eq('player_id', targetPlayerId)
+    .eq('liker_id', user.id)
+    .single();
+
+  if (existingLike) {
+    const lastLiked = new Date(existingLike.last_liked_at);
+    const now = new Date();
+    const diffHours = (now.getTime() - lastLiked.getTime()) / (1000 * 60 * 60);
+
+    if (diffHours < 24) {
+      throw new Error("You can only like a player once every 24 hours");
+    }
+
+    // Update timestamp
+    const { error: updateError } = await supabase
+      .from('player_likes')
+      .update({ last_liked_at: now.toISOString() })
+      .eq('id', existingLike.id);
+
+    if (updateError) throw updateError;
+  } else {
+    // Insert new like
+    const { error: insertError } = await supabase
+      .from('player_likes')
+      .insert({
+        player_id: targetPlayerId,
+        liker_id: user.id
+      });
+
+    if (insertError) throw insertError;
+  }
+};
+
+export const getPublicPlayerProfile = async (playerId: string) => {
+  // Get player details
+  const { data: player, error: playerError } = await supabase
+    .from('players')
+    .select('*')
+    .eq('id', playerId)
+    .single();
+
+  if (playerError) throw playerError;
+
+  // Get current team
+  let currentTeam = null;
+  if (player.team_id) {
+    const { data: team } = await supabase
+      .from('teams')
+      .select('id, name, logo_url, country')
+      .eq('id', player.team_id)
+      .single();
+    currentTeam = team;
+  }
+
+  // Get history
+  const { data: history } = await supabase
+    .from('player_team_history')
+    .select(`
+      *,
+      team:teams (name, logo_url)
+    `)
+    .eq('player_id', playerId)
+    .order('joined_at', { ascending: false });
+
+  // Get like count
+  const { count: likeCount } = await supabase
+    .from('player_likes')
+    .select('*', { count: 'exact', head: true })
+    .eq('player_id', playerId);
+
+  return {
+    player: {
+      ...player,
+      teamId: player.team_id,
+      createdAt: player.created_at,
+      instagramUrl: player.instagram_url,
+      youtubeUrl: player.youtube_url
+    },
+    currentTeam,
+    history: history?.map((h: any) => ({
+      ...h,
+      teamName: h.team?.name,
+      teamLogoUrl: h.team?.logo_url
+    })) || [],
+    likeCount: likeCount || 0
+  };
+};
+
+export const getPublicPlayerProfileByUsername = async (username: string) => {
+  // Get player details by username
+  const { data: player, error: playerError } = await supabase
+    .from('players')
+    .select('*')
+    .eq('username', username)
+    .single();
+
+  if (playerError) throw playerError;
+
+  // Reuse the logic by calling getPublicPlayerProfile with the found ID
+  // Or just duplicate/refactor. Reusing is better but might be slightly less efficient (2 calls).
+  // Let's just implement it directly to be efficient.
+
+  // Get current team
+  let currentTeam = null;
+  if (player.team_id) {
+    const { data: team } = await supabase
+      .from('teams')
+      .select('id, name, logo_url, country')
+      .eq('id', player.team_id)
+      .single();
+    currentTeam = team;
+  }
+
+  // Get history
+  const { data: history } = await supabase
+    .from('player_team_history')
+    .select(`
+      *,
+      team:teams (name, logo_url)
+    `)
+    .eq('player_id', player.id)
+    .order('joined_at', { ascending: false });
+
+  // Get like count
+  const { count: likeCount } = await supabase
+    .from('player_likes')
+    .select('*', { count: 'exact', head: true })
+    .eq('player_id', player.id);
+
+  return {
+    player: {
+      ...player,
+      teamId: player.team_id,
+      createdAt: player.created_at,
+      instagramUrl: player.instagram_url,
+      youtubeUrl: player.youtube_url
+    },
+    currentTeam,
+    history: history?.map((h: any) => ({
+      ...h,
+      teamName: h.team?.name,
+      teamLogoUrl: h.team?.logo_url
+    })) || [],
+    likeCount: likeCount || 0
+  };
+};
+
+export const updatePlayerSocials = async (playerId: string, instagramUrl?: string, youtubeUrl?: string) => {
+  const { error } = await supabase
+    .from('players')
+    .update({
+      instagram_url: instagramUrl,
+      youtube_url: youtubeUrl
+    })
+    .eq('id', playerId);
+
+  if (error) throw error;
+};
+
+export const joinTeam = async (playerId: string, joinCode: string) => {
+  // 1. Find team by code
+  const team = await getTeamByJoinCode(joinCode);
+  if (!team) throw new Error("Invalid join code");
+
+  // 2. Check if already requested or member
+  const { data: existingRequest } = await supabase
+    .from('join_requests')
+    .select('*')
+    .eq('player_id', playerId)
+    .eq('team_id', team.id)
+    .eq('status', 'pending')
+    .single();
+
+  if (existingRequest) throw new Error("You have already requested to join this team");
+
+  // 3. Create request
+  await saveJoinRequest({
+    id: generateId(),
+    playerId,
+    teamId: team.id,
+    status: 'pending',
+    createdAt: new Date().toISOString()
+  });
+
+  // 4. Update player status to pending
+  await supabase
+    .from('players')
+    .update({
+      team_id: team.id,
+      status: 'pending'
+    })
+    .eq('id', playerId);
+
+  return team;
 };

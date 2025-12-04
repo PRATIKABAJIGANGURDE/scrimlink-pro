@@ -11,6 +11,7 @@ import PlayerRegister from "./pages/player/PlayerRegister";
 import PlayerLogin from "./pages/player/PlayerLogin";
 import PlayerDashboard from "./pages/player/PlayerDashboard";
 import PlayerProfile from "./pages/player/PlayerProfile";
+import PublicPlayerProfile from "./pages/player/PublicPlayerProfile";
 import NotFound from "./pages/NotFound";
 
 import ScrimManagement from "./pages/scrim/ScrimManagement";
@@ -45,6 +46,7 @@ const App = () => (
           <Route path="/player/login" element={<PlayerLogin />} />
           <Route path="/player/dashboard" element={<PlayerDashboard />} />
           <Route path="/player/profile" element={<PlayerProfile />} />
+          <Route path="/player/:username" element={<PublicPlayerProfile />} />
           <Route path="/player/stats" element={<PlayerStats />} />
           <Route path="/scrim/:id" element={<ScrimManagement />} />
           <Route path="*" element={<NotFound />} />

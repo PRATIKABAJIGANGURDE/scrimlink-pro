@@ -8,15 +8,19 @@ interface ResponsiveNavbarProps {
     subtitle?: string;
     icon?: React.ReactNode;
     children: React.ReactNode;
-    variant?: "floating" | "default";
+    variant?: "floating" | "default" | "dashboard";
 }
 
 export const ResponsiveNavbar = ({ title, subtitle, icon, children, variant = "floating" }: ResponsiveNavbarProps) => {
     const [open, setOpen] = useState(false);
 
-    const headerClass = variant === "floating"
-        ? "fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-6xl z-50 rounded-xl border border-border/40 bg-background/70 backdrop-blur-md shadow-sm"
-        : "sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60";
+    let headerClass = "relative z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60";
+
+    if (variant === "floating") {
+        headerClass = "fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-6xl z-50 rounded-xl border border-border/40 bg-background/70 backdrop-blur-md shadow-sm";
+    } else if (variant === "dashboard") {
+        headerClass = "fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-6xl z-50 rounded-xl border border-border/40 bg-background/70 backdrop-blur-md shadow-sm md:relative md:top-0 md:left-0 md:translate-x-0 md:w-full md:max-w-none md:rounded-none md:border-b md:border-x-0 md:bg-background/95 md:shadow-none";
+    }
 
     return (
         <header className={headerClass}>

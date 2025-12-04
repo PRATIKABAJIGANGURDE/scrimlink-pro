@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+
+// ... inside component ...
+
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -242,16 +246,18 @@ const Rankings = () => {
                                                         <div className="flex items-center justify-center w-8 h-8">
                                                             {getRankIcon(index)}
                                                         </div>
-                                                        <Avatar className="h-10 w-10 border-2 border-primary/20">
-                                                            <AvatarImage src={player.profileUrl} alt={player.username} />
-                                                            <AvatarFallback className="text-sm font-bold bg-primary/10">
-                                                                {player.username.substring(0, 2).toUpperCase()}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        <div>
-                                                            <div className="font-bold text-lg break-all">{player.username}</div>
-                                                            <div className="text-xs text-muted-foreground">{player.teamName}</div>
-                                                        </div>
+                                                        <Link to={`/player/${player.username}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                                                            <Avatar className="h-10 w-10 border-2 border-primary/20">
+                                                                <AvatarImage src={player.profileUrl} alt={player.username} />
+                                                                <AvatarFallback className="text-sm font-bold bg-primary/10">
+                                                                    {player.username.substring(0, 2).toUpperCase()}
+                                                                </AvatarFallback>
+                                                            </Avatar>
+                                                            <div>
+                                                                <div className="font-bold text-lg break-all">{player.username}</div>
+                                                                <div className="text-xs text-muted-foreground">{player.teamName}</div>
+                                                            </div>
+                                                        </Link>
                                                     </div>
                                                 </div>
 
@@ -303,7 +309,7 @@ const Rankings = () => {
                                                             </div>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <div className="flex items-center gap-3">
+                                                            <Link to={`/player/${player.username}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity w-fit">
                                                                 <Avatar className="h-8 w-8 border-2 border-primary/20">
                                                                     <AvatarImage src={player.profileUrl} alt={player.username} />
                                                                     <AvatarFallback className="text-xs font-bold bg-primary/10">
@@ -311,7 +317,7 @@ const Rankings = () => {
                                                                     </AvatarFallback>
                                                                 </Avatar>
                                                                 <span className="font-semibold">{player.username}</span>
-                                                            </div>
+                                                            </Link>
                                                         </TableCell>
                                                         <TableCell className="text-muted-foreground">{player.teamName}</TableCell>
                                                         <TableCell className="text-center">{player.matches}</TableCell>

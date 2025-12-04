@@ -4,11 +4,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getCurrentPlayer, signOut, getTeamById, getPlayerStats, getTeamStats } from "@/lib/storage";
+import { getCurrentPlayer, signOut, getTeamById, getPlayerStats, getTeamStats, joinTeam } from "@/lib/storage";
 import { Player, Team } from "@/types";
-import { Users, LogOut, Target, Trophy, Clock, BarChart3, Crosshair, TrendingUp, User as UserIcon, BarChart } from "lucide-react";
+import { Users, LogOut, Target, Trophy, Clock, BarChart3, Crosshair, TrendingUp, User as UserIcon, BarChart, ArrowRight } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const PlayerDashboard = () => {
   const navigate = useNavigate();
@@ -17,6 +30,8 @@ const PlayerDashboard = () => {
   const [team, setTeam] = useState<Team | null>(null);
   const [stats, setStats] = useState<any[]>([]);
   const [teamStats, setTeamStats] = useState<any[]>([]);
+  const [joinCode, setJoinCode] = useState("");
+  const [isJoining, setIsJoining] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -57,6 +72,34 @@ const PlayerDashboard = () => {
     navigate("/");
   };
 
+  const handleJoinTeam = async () => {
+    if (!player || !joinCode) return;
+    setIsJoining(true);
+    try {
+      const joinedTeam = await joinTeam(player.id, joinCode);
+      toast({
+        title: "Request Sent",
+        description: `Successfully requested to join ${joinedTeam.name}`
+      });
+      // Refresh player data
+      const updatedPlayer = await getCurrentPlayer();
+      setPlayer(updatedPlayer);
+      if (updatedPlayer?.teamId) {
+        const t = await getTeamById(updatedPlayer.teamId);
+        setTeam(t);
+      }
+      setJoinCode("");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to join team",
+        variant: "destructive"
+      });
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
   if (!player) return null;
 
   const isPending = player.status === 'pending';
@@ -76,7 +119,7 @@ const PlayerDashboard = () => {
       <ResponsiveNavbar
         title={player.username}
         subtitle="Player Dashboard"
-        variant="default"
+        variant="dashboard"
         icon={<Users className="h-8 w-8 text-primary" />}
       >
         <Button variant="outline" size="sm" onClick={() => navigate("/player/profile")}>
@@ -91,14 +134,30 @@ const PlayerDashboard = () => {
           <BarChart className="h-4 w-4 mr-2" />
           Results
         </Button>
-        <Button variant="outline" size="sm" onClick={handleLogout}>
-          <LogOut className="h-4 w-4 mr-2" />
-          Logout
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                You will be logged out of your account.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleLogout}>Logout</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </ResponsiveNavbar>
 
-      <main className="container mx-auto px-4 py-8">
-        {/* Status Card */}
+      <main className="container mx-auto px-4 pt-24 md:pt-8 pb-8">
+        {/* Status Cards */}
         {isPending && (
           <Card className="mb-8 border-accent/50 bg-accent/5">
             <CardContent className="p-6">
@@ -113,6 +172,33 @@ const PlayerDashboard = () => {
                     The team captain will review your request soon.
                   </p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {!player.teamId && (
+          <Card className="mb-8 border-primary/20">
+            <CardHeader>
+              <CardTitle>Join a Team</CardTitle>
+              <CardDescription>Enter a team's 6-digit join code to send a request.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-4 max-w-md">
+                <div className="flex-1">
+                  <Label htmlFor="joinCode" className="sr-only">Join Code</Label>
+                  <Input
+                    id="joinCode"
+                    placeholder="Enter 6-digit code"
+                    value={joinCode}
+                    onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                    maxLength={6}
+                  />
+                </div>
+                <Button onClick={handleJoinTeam} disabled={isJoining || joinCode.length !== 6}>
+                  {isJoining ? "Joining..." : "Join Team"}
+                  {!isJoining && <ArrowRight className="ml-2 h-4 w-4" />}
+                </Button>
               </div>
             </CardContent>
           </Card>

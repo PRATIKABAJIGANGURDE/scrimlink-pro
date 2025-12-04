@@ -24,6 +24,17 @@ import {
 import { Team, JoinRequest, Player, Scrim, Match, MatchTeamStats } from "@/types";
 import { Trophy, Users, Copy, Check, LogOut, UserPlus, UserCheck, UserX, Target, Calendar, Plus, BarChart, Crown } from "lucide-react";
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const TeamDashboard = () => {
   const navigate = useNavigate();
@@ -110,31 +121,30 @@ const TeamDashboard = () => {
           id: generateId(),
           scrimId: scrimId,
           matchNumber: i,
+          mapName: "TBD",
           status: 'pending',
           createdAt: new Date().toISOString(),
         };
         matchPromises.push(saveMatch(match));
       }
+
       await Promise.all(matchPromises);
 
-      toast({ title: "Success", description: "Scrim created successfully" });
+      toast({
+        title: "Success",
+        description: "Scrim created successfully",
+      });
       setIsCreateScrimOpen(false);
-      setNewScrim({ name: "", matchCount: 4, startTime: "" });
       loadData(team.id);
     } catch (error) {
-      console.error(error);
-      toast({ title: "Error", description: "Failed to create scrim", variant: "destructive" });
+      console.error("Failed to create scrim:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create scrim",
+        variant: "destructive"
+      });
     } finally {
       setCreatingScrim(false);
-    }
-  };
-
-  const copyJoinCode = () => {
-    if (team) {
-      navigator.clipboard.writeText(team.joinCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      toast({ title: "Copied!", description: "Join code copied to clipboard" });
     }
   };
 
@@ -143,20 +153,28 @@ const TeamDashboard = () => {
     navigate("/");
   };
 
+  const copyJoinCode = () => {
+    if (team?.joinCode) {
+      navigator.clipboard.writeText(team.joinCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast({
+        title: "Copied!",
+        description: "Join code copied to clipboard",
+      });
+    }
+  };
+
   const handleApprove = async (request: JoinRequest) => {
-    console.log("Approving request:", request);
     try {
       await updateJoinRequest(request.id, 'approved');
-      console.log("Join request updated");
-      await updatePlayer(request.playerId, { status: 'approved' });
-      console.log("Player status updated");
-      toast({ title: "Approved", description: `${request.playerUsername} has been added to the roster` });
-      if (team) {
-        console.log("Reloading data for team:", team.id);
-        await loadData(team.id);
-      }
+      toast({
+        title: "Success",
+        description: "Player approved successfully",
+      });
+      if (team) loadData(team.id);
     } catch (error) {
-      console.error("Error approving request:", error);
+      console.error("Failed to approve request:", error);
       toast({
         title: "Error",
         description: "Failed to approve request",
@@ -168,11 +186,13 @@ const TeamDashboard = () => {
   const handleReject = async (request: JoinRequest) => {
     try {
       await updateJoinRequest(request.id, 'rejected');
-      await updatePlayer(request.playerId, { status: 'rejected' });
-      toast({ title: "Rejected", description: `${request.playerUsername}'s request has been rejected` });
+      toast({
+        title: "Rejected",
+        description: "Player request rejected",
+      });
       if (team) loadData(team.id);
     } catch (error) {
-      console.error(error);
+      console.error("Failed to reject request:", error);
       toast({
         title: "Error",
         description: "Failed to reject request",
@@ -188,24 +208,40 @@ const TeamDashboard = () => {
       <ResponsiveNavbar
         title={team.name}
         subtitle="Team Dashboard"
-        variant="default"
+        variant="dashboard"
         icon={<Trophy className="h-8 w-8 text-primary" />}
       >
         <Button variant="outline" size="sm" onClick={() => navigate("/rankings")}>
           <Crown className="h-4 w-4 mr-2" />
           Rankings
         </Button>
-        <Button variant="outline" size="sm" onClick={() => navigate("/team/stats")}>
+        <Button variant="outline" size="sm" onClick={() => navigate("/match-results")}>
           <BarChart className="h-4 w-4 mr-2" />
-          View Stats
+          Results
         </Button>
-        <Button variant="outline" size="sm" onClick={handleLogout}>
-          <LogOut className="h-4 w-4 mr-2" />
-          Logout
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                You will be logged out of your account.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleLogout}>Logout</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </ResponsiveNavbar>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 pt-24 md:pt-8 pb-8">
         {/* Join Code Card */}
         <Card className="mb-8">
           <CardContent className="p-6">
@@ -283,7 +319,7 @@ const TeamDashboard = () => {
         </div>
 
         {/* Tabs */}
-        < Tabs defaultValue="roster" className="space-y-6" >
+        <Tabs defaultValue="roster" className="space-y-6">
           <TabsList>
             <TabsTrigger value="roster">Roster</TabsTrigger>
             <TabsTrigger value="requests">
@@ -424,9 +460,9 @@ const TeamDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs >
-      </main >
-    </div >
+        </Tabs>
+      </main>
+    </div>
   );
 };
 

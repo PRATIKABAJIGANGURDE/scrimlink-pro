@@ -26,11 +26,7 @@ const PlayerRegister = () => {
   });
 
   useEffect(() => {
-    const code = searchParams.get("code");
     const role = searchParams.get("role");
-    if (code) {
-      setFormData(prev => ({ ...prev, joinCode: code }));
-    }
     if (role) {
       setFormData(prev => ({ ...prev, role: role }));
     }
@@ -65,7 +61,7 @@ const PlayerRegister = () => {
         formData.email,
         formData.password,
         formData.username,
-        formData.joinCode.toUpperCase(),
+        undefined, // No join code
         formData.role
       );
 
@@ -168,20 +164,6 @@ const PlayerRegister = () => {
                   <SelectItem value="Flanker">Flanker</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="joinCode">Team Join Code</Label>
-              <Input
-                id="joinCode"
-                placeholder="e.g., RJ4K82"
-                value={formData.joinCode}
-                onChange={(e) => setFormData({ ...formData, joinCode: e.target.value.toUpperCase() })}
-                className="uppercase tracking-widest"
-                maxLength={6}
-                required
-              />
-              <p className="text-xs text-muted-foreground">Get this code from your team captain</p>
             </div>
 
             <div className="space-y-2">

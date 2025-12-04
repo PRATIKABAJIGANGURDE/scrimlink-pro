@@ -4,18 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getCurrentPlayer, signOut, getTeamById, updatePlayer } from "@/lib/storage";
+import { getCurrentPlayer, signOut, getTeamById, leaveTeam, updatePlayerSocials } from "@/lib/storage";
 import { Player, Team } from "@/types";
-import { Users, LogOut, Trophy, UserMinus, Mail, Calendar as CalendarIcon, Shield, ArrowLeft, Crown, BarChart } from "lucide-react";
+import { Users, LogOut, Trophy, UserMinus, Mail, Calendar as CalendarIcon, Shield, ArrowLeft, Crown, BarChart, Instagram, Youtube, Save } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const PlayerProfile = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
     const [player, setPlayer] = useState<Player | null>(null);
     const [team, setTeam] = useState<Team | null>(null);
+    const [socials, setSocials] = useState({ instagram: "", youtube: "" });
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         const init = async () => {
@@ -26,6 +30,10 @@ const PlayerProfile = () => {
                     return;
                 }
                 setPlayer(currentPlayer);
+                setSocials({
+                    instagram: currentPlayer.instagramUrl || "",
+                    youtube: currentPlayer.youtubeUrl || ""
+                });
 
                 if (currentPlayer.teamId) {
                     try {
@@ -49,13 +57,9 @@ const PlayerProfile = () => {
     };
 
     const handleLeaveTeam = async () => {
-        if (!player) return;
+        if (!player || !player.teamId) return;
         try {
-            await updatePlayer(player.id, {
-                teamId: null,
-                status: 'pending',
-                role: null
-            });
+            await leaveTeam(player.id, player.teamId);
             toast({
                 title: "Left Team",
                 description: "You have successfully left the team"
@@ -74,6 +78,27 @@ const PlayerProfile = () => {
         }
     };
 
+    const handleSaveSocials = async () => {
+        if (!player) return;
+        setIsSaving(true);
+        try {
+            await updatePlayerSocials(player.id, socials.instagram, socials.youtube);
+            toast({
+                title: "Profile Updated",
+                description: "Social links saved successfully"
+            });
+        } catch (error) {
+            console.error("Failed to save socials:", error);
+            toast({
+                title: "Error",
+                description: "Failed to save social links",
+                variant: "destructive"
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     if (!player) return null;
 
     const isApproved = player.status === 'approved';
@@ -83,6 +108,7 @@ const PlayerProfile = () => {
             <ResponsiveNavbar
                 title={player.username}
                 subtitle="Player Profile"
+                variant="dashboard"
                 icon={<Users className="h-8 w-8 text-primary" />}
             >
                 <Button variant="outline" size="sm" onClick={() => navigate("/player/dashboard")}>
@@ -103,14 +129,14 @@ const PlayerProfile = () => {
                 </Button>
             </ResponsiveNavbar>
 
-            <main className="container mx-auto px-4 py-4 md:py-8">
+            <main className="container mx-auto px-4 pt-24 md:pt-8 pb-8">
                 {/* Profile Header Card */}
                 <Card className="mb-8">
                     <CardHeader>
                         <CardTitle>Profile Information</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                        <div className="flex flex-col md:flex-row items-start gap-8">
                             {/* Profile Picture */}
                             <Avatar className="h-32 w-32 border-4 border-primary/20">
                                 <AvatarImage src={player.profileUrl} alt={player.username} />
@@ -119,40 +145,70 @@ const PlayerProfile = () => {
                                 </AvatarFallback>
                             </Avatar>
 
-                            {/* Player Details */}
-                            <div className="flex-1 space-y-4">
-                                <div>
-                                    <h2 className="text-3xl font-bold mb-2">{player.username}</h2>
-                                    <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
-                                        <span className="flex items-center gap-2">
-                                            <Mail className="h-4 w-4" />
-                                            {player.email}
-                                        </span>
-                                        <span className="flex items-center gap-2">
-                                            <CalendarIcon className="h-4 w-4" />
-                                            Joined {new Date(player.createdAt).toLocaleDateString()}
-                                        </span>
+                            {/* Player Details & Socials */}
+                            <div className="flex-1 space-y-6 w-full">
+                                <div className="space-y-4">
+                                    <div>
+                                        <h2 className="text-3xl font-bold mb-2">{player.username}</h2>
+                                        <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
+                                            <span className="flex items-center gap-2">
+                                                <Mail className="h-4 w-4" />
+                                                {player.email}
+                                            </span>
+                                            <span className="flex items-center gap-2">
+                                                <CalendarIcon className="h-4 w-4" />
+                                                Joined {new Date(player.createdAt).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        {player.role && (
+                                            <Badge variant="outline" className="flex items-center gap-2">
+                                                <Shield className="h-4 w-4" />
+                                                {player.role}
+                                            </Badge>
+                                        )}
+                                        <Badge
+                                            variant={player.status === 'approved' ? 'default' : player.status === 'pending' ? 'secondary' : 'destructive'}
+                                        >
+                                            {player.status.toUpperCase()}
+                                        </Badge>
                                     </div>
                                 </div>
 
-                                {/* Role Badge */}
-                                {player.role && (
-                                    <div>
-                                        <Badge variant="outline" className="flex items-center gap-2 w-fit">
-                                            <Shield className="h-4 w-4" />
-                                            {player.role}
-                                        </Badge>
+                                <div className="grid gap-4 max-w-md border-t pt-4">
+                                    <h3 className="font-semibold mb-2">Social Links</h3>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="instagram">Instagram URL</Label>
+                                        <div className="relative">
+                                            <Instagram className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                id="instagram"
+                                                placeholder="https://instagram.com/..."
+                                                className="pl-9"
+                                                value={socials.instagram}
+                                                onChange={(e) => setSocials({ ...socials, instagram: e.target.value })}
+                                            />
+                                        </div>
                                     </div>
-                                )}
-
-                                {/* Status Badge */}
-                                <div>
-                                    <Badge
-                                        variant={player.status === 'approved' ? 'default' : player.status === 'pending' ? 'secondary' : 'destructive'}
-                                        className="w-fit"
-                                    >
-                                        {player.status.toUpperCase()}
-                                    </Badge>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="youtube">YouTube URL</Label>
+                                        <div className="relative">
+                                            <Youtube className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                id="youtube"
+                                                placeholder="https://youtube.com/..."
+                                                className="pl-9"
+                                                value={socials.youtube}
+                                                onChange={(e) => setSocials({ ...socials, youtube: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <Button onClick={handleSaveSocials} disabled={isSaving} className="w-fit">
+                                        <Save className="h-4 w-4 mr-2" />
+                                        {isSaving ? "Saving..." : "Save Social Links"}
+                                    </Button>
                                 </div>
                             </div>
                         </div>

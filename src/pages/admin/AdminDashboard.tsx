@@ -19,6 +19,17 @@ import {
 import { Scrim, Match } from "@/types";
 import { Shield, LogOut, Plus, Target, Calendar, Trophy, BarChart } from "lucide-react";
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
@@ -103,20 +114,28 @@ const AdminDashboard = () => {
                     id: generateId(),
                     scrimId: scrimId,
                     matchNumber: i,
+                    mapName: "TBD",
                     status: 'pending',
                     createdAt: new Date().toISOString(),
                 };
                 matchPromises.push(saveMatch(match));
             }
+
             await Promise.all(matchPromises);
 
-            toast({ title: "Success", description: "Scrim created successfully" });
+            toast({
+                title: "Success",
+                description: "Scrim created successfully",
+            });
             setIsCreateScrimOpen(false);
-            setNewScrim({ name: "", matchCount: 4, startTime: "" });
             loadData();
         } catch (error) {
-            console.error(error);
-            toast({ title: "Error", description: "Failed to create scrim", variant: "destructive" });
+            console.error("Failed to create scrim:", error);
+            toast({
+                title: "Error",
+                description: "Failed to create scrim",
+                variant: "destructive"
+            });
         } finally {
             setCreatingScrim(false);
         }
@@ -127,14 +146,14 @@ const AdminDashboard = () => {
         navigate("/");
     };
 
-    if (loading) return <div>Loading...</div>;
+    if (loading) return null;
     if (!isAdmin) return null;
 
     return (
         <div className="min-h-screen bg-background">
             <ResponsiveNavbar
                 title="Admin Dashboard"
-                subtitle="Manage Scrims"
+                variant="dashboard"
                 icon={<Shield className="h-8 w-8 text-primary" />}
             >
                 <Button variant="outline" size="sm" onClick={() => navigate("/rankings")}>
@@ -145,10 +164,26 @@ const AdminDashboard = () => {
                     <BarChart className="h-4 w-4 mr-2" />
                     Results
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleLogout}>
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Logout
-                </Button>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                            <LogOut className="h-4 w-4 mr-2" />
+                            Logout
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                You will be logged out of your account.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleLogout}>Logout</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </ResponsiveNavbar>
 
             <main className="container mx-auto px-4 pt-24 pb-8">
