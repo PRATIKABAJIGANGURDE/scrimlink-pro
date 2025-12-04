@@ -44,6 +44,7 @@ const AdminDashboard = () => {
     const [scrims, setScrims] = useState<Scrim[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
     const [players, setPlayers] = useState<Player[]>([]);
+    const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
     const [isCreateScrimOpen, setIsCreateScrimOpen] = useState(false);
     const [creatingScrim, setCreatingScrim] = useState(false);
     const [selectedScrimResults, setSelectedScrimResults] = useState<any[] | null>(null);
@@ -353,6 +354,8 @@ const AdminDashboard = () => {
                         </Card>
                     </TabsContent>
 
+
+
                     <TabsContent value="teams">
                         <Card>
                             <CardHeader>
@@ -372,9 +375,15 @@ const AdminDashboard = () => {
                                     <TableBody>
                                         {teams.map((team) => (
                                             <TableRow key={team.id}>
-                                                <TableCell className="font-medium flex items-center gap-2">
-                                                    <Users className="h-4 w-4 text-muted-foreground" />
-                                                    {team.name}
+                                                <TableCell className="font-medium">
+                                                    <Button
+                                                        variant="link"
+                                                        className="p-0 h-auto font-medium flex items-center gap-2 text-foreground hover:text-primary"
+                                                        onClick={() => setSelectedTeam(team)}
+                                                    >
+                                                        <Users className="h-4 w-4 text-muted-foreground" />
+                                                        {team.name}
+                                                    </Button>
                                                 </TableCell>
                                                 <TableCell>{team.email}</TableCell>
                                                 <TableCell>{team.country || "N/A"}</TableCell>
@@ -392,6 +401,60 @@ const AdminDashboard = () => {
                                 </Table>
                             </CardContent>
                         </Card>
+
+                        <Dialog open={!!selectedTeam} onOpenChange={(open) => !open && setSelectedTeam(null)}>
+                            <DialogContent className="max-w-3xl">
+                                <DialogHeader>
+                                    <DialogTitle className="flex items-center gap-2">
+                                        <Users className="h-5 w-5" />
+                                        {selectedTeam?.name} - Roster
+                                    </DialogTitle>
+                                    <DialogDescription>
+                                        Players currently in this team
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="mt-4">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Username</TableHead>
+                                                <TableHead>Email</TableHead>
+                                                <TableHead>Role</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead>Joined At</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {players.filter(p => p.teamId === selectedTeam?.id).map((player) => (
+                                                <TableRow key={player.id}>
+                                                    <TableCell className="font-medium flex items-center gap-2">
+                                                        <User className="h-4 w-4 text-muted-foreground" />
+                                                        {player.username}
+                                                    </TableCell>
+                                                    <TableCell>{player.email}</TableCell>
+                                                    <TableCell>
+                                                        {player.role ? <Badge variant="outline">{player.role}</Badge> : '-'}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={player.status === 'approved' ? 'default' : 'secondary'}>
+                                                            {player.status}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell>{new Date(player.createdAt).toLocaleDateString()}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                            {players.filter(p => p.teamId === selectedTeam?.id).length === 0 && (
+                                                <TableRow>
+                                                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                                                        No players found in this team
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
                     </TabsContent>
 
                     <TabsContent value="players">
