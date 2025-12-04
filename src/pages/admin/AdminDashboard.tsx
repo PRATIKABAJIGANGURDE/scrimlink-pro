@@ -427,9 +427,15 @@ const AdminDashboard = () => {
                                         <TableBody>
                                             {players.filter(p => p.teamId === selectedTeam?.id).map((player) => (
                                                 <TableRow key={player.id}>
-                                                    <TableCell className="font-medium flex items-center gap-2">
-                                                        <User className="h-4 w-4 text-muted-foreground" />
-                                                        {player.username}
+                                                    <TableCell className="font-medium">
+                                                        <Button
+                                                            variant="link"
+                                                            className="p-0 h-auto font-medium flex items-center gap-2 text-foreground hover:text-primary"
+                                                            onClick={() => navigate(`/player/${player.username}`)}
+                                                        >
+                                                            <User className="h-4 w-4 text-muted-foreground" />
+                                                            {player.username}
+                                                        </Button>
                                                     </TableCell>
                                                     <TableCell>{player.email}</TableCell>
                                                     <TableCell>
@@ -477,10 +483,14 @@ const AdminDashboard = () => {
                                     <TableBody>
                                         {players.map((player) => (
                                             <TableRow key={player.id}>
-                                                <TableCell className="font-medium flex items-center gap-2">
+                                                <Button
+                                                    variant="link"
+                                                    className="p-0 h-auto font-medium flex items-center gap-2 text-foreground hover:text-primary"
+                                                    onClick={() => navigate(`/player/${player.username}`)}
+                                                >
                                                     <User className="h-4 w-4 text-muted-foreground" />
                                                     {player.username}
-                                                </TableCell>
+                                                </Button>
                                                 <TableCell>{player.email}</TableCell>
                                                 <TableCell>
                                                     <Badge variant="outline">
