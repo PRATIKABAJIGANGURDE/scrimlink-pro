@@ -10,6 +10,7 @@ import TeamDashboard from "./pages/team/TeamDashboard";
 import PlayerRegister from "./pages/player/PlayerRegister";
 import PlayerLogin from "./pages/player/PlayerLogin";
 import PlayerDashboard from "./pages/player/PlayerDashboard";
+import PlayerProfile from "./pages/player/PlayerProfile";
 import NotFound from "./pages/NotFound";
 
 import ScrimManagement from "./pages/scrim/ScrimManagement";
@@ -32,7 +33,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/rankings" element={<Rankings />} />
-          <Route path="/results" element={<MatchResults />} />
+          <Route path="/match-results" element={<MatchResults />} />
           <Route path="/team/register" element={<TeamRegister />} />
           <Route path="/team/login" element={<TeamLogin />} />
           <Route path="/team/dashboard" element={<TeamDashboard />} />
@@ -43,6 +44,7 @@ const App = () => (
           <Route path="/player/register" element={<PlayerRegister />} />
           <Route path="/player/login" element={<PlayerLogin />} />
           <Route path="/player/dashboard" element={<PlayerDashboard />} />
+          <Route path="/player/profile" element={<PlayerProfile />} />
           <Route path="/player/stats" element={<PlayerStats />} />
           <Route path="/scrim/:id" element={<ScrimManagement />} />
           <Route path="*" element={<NotFound />} />

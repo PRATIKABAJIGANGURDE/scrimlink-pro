@@ -17,7 +17,8 @@ import {
     generateId
 } from "@/lib/storage";
 import { Scrim, Match } from "@/types";
-import { Shield, LogOut, Plus, Target, Calendar } from "lucide-react";
+import { Shield, LogOut, Plus, Target, Calendar, Trophy, BarChart } from "lucide-react";
+import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
@@ -131,21 +132,24 @@ const AdminDashboard = () => {
 
     return (
         <div className="min-h-screen bg-background">
-            <header className="border-b border-border">
-                <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <Shield className="h-8 w-8 text-primary" />
-                        <div>
-                            <h1 className="text-xl font-bold">Admin Dashboard</h1>
-                            <p className="text-sm text-muted-foreground">Manage Scrims</p>
-                        </div>
-                    </div>
-                    <Button variant="outline" onClick={handleLogout}>
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Logout
-                    </Button>
-                </div>
-            </header>
+            <ResponsiveNavbar
+                title="Admin Dashboard"
+                subtitle="Manage Scrims"
+                icon={<Shield className="h-8 w-8 text-primary" />}
+            >
+                <Button variant="outline" size="sm" onClick={() => navigate("/rankings")}>
+                    <Trophy className="h-4 w-4 mr-2" />
+                    Rankings
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => navigate("/match-results")}>
+                    <BarChart className="h-4 w-4 mr-2" />
+                    Results
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleLogout}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                </Button>
+            </ResponsiveNavbar>
 
             <main className="container mx-auto px-4 py-8">
                 <Card>

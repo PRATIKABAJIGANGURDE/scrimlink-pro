@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getAllTeamStats, getAllPlayerStats } from "@/lib/storage";
 import { Trophy, Medal, Crown, ArrowLeft, Swords, Target } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Rankings = () => {
     const navigate = useNavigate();
@@ -92,20 +93,24 @@ const Rankings = () => {
     return (
         <div className="min-h-screen bg-background p-4 md:p-8">
             <div className="max-w-6xl mx-auto space-y-8">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                         <Button variant="ghost" onClick={() => navigate(-1)}>
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Back
                         </Button>
                         <div>
-                            <h1 className="text-3xl font-bold flex items-center gap-2">
+                            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
                                 <Crown className="h-8 w-8 text-primary" />
                                 Global Rankings
                             </h1>
-                            <p className="text-muted-foreground">Top performing teams and players</p>
+                            <p className="text-muted-foreground text-sm">Top performing teams and players</p>
                         </div>
                     </div>
+                    <Button variant="outline" size="sm" onClick={() => navigate("/match-results")}>
+                        <Target className="h-4 w-4 mr-2" />
+                        Match Results
+                    </Button>
                 </div>
 
                 {error && (
@@ -237,6 +242,12 @@ const Rankings = () => {
                                                         <div className="flex items-center justify-center w-8 h-8">
                                                             {getRankIcon(index)}
                                                         </div>
+                                                        <Avatar className="h-10 w-10 border-2 border-primary/20">
+                                                            <AvatarImage src={player.profileUrl} alt={player.username} />
+                                                            <AvatarFallback className="text-sm font-bold bg-primary/10">
+                                                                {player.username.substring(0, 2).toUpperCase()}
+                                                            </AvatarFallback>
+                                                        </Avatar>
                                                         <div>
                                                             <div className="font-bold text-lg">{player.username}</div>
                                                             <div className="text-xs text-muted-foreground">{player.teamName}</div>
@@ -290,7 +301,17 @@ const Rankings = () => {
                                                                 {getRankIcon(index)}
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell className="font-semibold">{player.username}</TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-3">
+                                                                <Avatar className="h-8 w-8 border-2 border-primary/20">
+                                                                    <AvatarImage src={player.profileUrl} alt={player.username} />
+                                                                    <AvatarFallback className="text-xs font-bold bg-primary/10">
+                                                                        {player.username.substring(0, 2).toUpperCase()}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                                <span className="font-semibold">{player.username}</span>
+                                                            </div>
+                                                        </TableCell>
                                                         <TableCell className="text-muted-foreground">{player.teamName}</TableCell>
                                                         <TableCell className="text-center">{player.matches}</TableCell>
                                                         <TableCell className="text-center">{(player.kills / player.matches).toFixed(1)}</TableCell>

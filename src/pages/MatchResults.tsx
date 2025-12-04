@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getScrims, getMatchesByScrimId, getMatchResults } from "@/lib/storage";
-import { ArrowLeft, Trophy, Calendar, Map as MapIcon, Target, Crosshair } from "lucide-react";
+import { ArrowLeft, Trophy, Calendar, Map as MapIcon, Target, Crosshair, Crown } from "lucide-react";
 import { Scrim, Match } from "@/types";
 
 const MatchResults = () => {
@@ -76,20 +76,24 @@ const MatchResults = () => {
     return (
         <div className="min-h-screen bg-background p-4 md:p-8">
             <div className="max-w-6xl mx-auto space-y-8">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                         <Button variant="ghost" onClick={() => navigate(-1)}>
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Back
                         </Button>
                         <div>
-                            <h1 className="text-3xl font-bold flex items-center gap-2">
+                            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
                                 <Trophy className="h-8 w-8 text-primary" />
                                 Match Results
                             </h1>
-                            <p className="text-muted-foreground">Detailed scoreboards for every match</p>
+                            <p className="text-muted-foreground text-sm">Detailed scoreboards for every match</p>
                         </div>
                     </div>
+                    <Button variant="outline" size="sm" onClick={() => navigate("/rankings")}>
+                        <Crown className="h-4 w-4 mr-2" />
+                        Rankings
+                    </Button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

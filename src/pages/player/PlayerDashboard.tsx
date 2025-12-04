@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { getCurrentPlayer, signOut, getTeamById, getPlayerStats, getTeamStats } from "@/lib/storage";
 import { Player, Team } from "@/types";
-import { Users, LogOut, Target, Trophy, Clock, BarChart3, Crosshair, TrendingUp } from "lucide-react";
+import { Users, LogOut, Target, Trophy, Clock, BarChart3, Crosshair, TrendingUp, User as UserIcon, BarChart } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
 
@@ -78,9 +78,17 @@ const PlayerDashboard = () => {
         subtitle="Player Dashboard"
         icon={<Users className="h-8 w-8 text-primary" />}
       >
+        <Button variant="outline" size="sm" onClick={() => navigate("/player/profile")}>
+          <UserIcon className="h-4 w-4 mr-2" />
+          Profile
+        </Button>
         <Button variant="outline" size="sm" onClick={() => navigate("/rankings")}>
           <Trophy className="h-4 w-4 mr-2" />
           Rankings
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => navigate("/match-results")}>
+          <BarChart className="h-4 w-4 mr-2" />
+          Results
         </Button>
         <Button variant="outline" size="sm" onClick={handleLogout}>
           <LogOut className="h-4 w-4 mr-2" />
