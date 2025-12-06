@@ -432,6 +432,23 @@ export const leaveScrim = async (scrimId: string, teamId: string): Promise<void>
   if (error) throw error;
 };
 
+export const getMyScrims = async (teamId: string): Promise<ScrimTeam[]> => {
+  const { data, error } = await supabase
+    .from('scrim_teams')
+    .select('*')
+    .eq('team_id', teamId);
+
+  if (error) throw error;
+  return data.map((st: any) => ({
+    ...st,
+    scrimId: st.scrim_id,
+    teamId: st.team_id,
+    teamName: st.team_name,
+    joinedAt: st.joined_at,
+    slot: st.slot
+  }));
+};
+
 // Match Stats
 export const saveMatchTeamStats = async (stats: MatchTeamStats): Promise<void> => {
   const { error } = await supabase.from('match_team_stats').upsert({

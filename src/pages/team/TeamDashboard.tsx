@@ -21,7 +21,8 @@ import {
   generateId,
   getTeamStats,
   joinScrim,
-  getScrimTeams
+  getScrimTeams,
+  getMyScrims
 } from "@/lib/storage";
 import { Team, JoinRequest, Player, Scrim, Match, MatchTeamStats, ScrimTeam } from "@/types";
 import { Trophy, Users, Copy, Check, LogOut, UserPlus, UserCheck, UserX, Target, Calendar, Plus, BarChart, Crown } from "lucide-react";
@@ -59,6 +60,7 @@ const TeamDashboard = () => {
   const [takenSlots, setTakenSlots] = useState<number[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string>("");
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
+  const [myScrimIds, setMyScrimIds] = useState<string[]>([]);
 
   useEffect(() => {
     const init = async () => {
@@ -82,17 +84,19 @@ const TeamDashboard = () => {
 
   const loadData = async (teamId: string) => {
     try {
-      const [reqs, players, allScrims, teamStats] = await Promise.all([
+      const [reqs, players, allScrims, teamStats, myScrims] = await Promise.all([
         getJoinRequestsByTeamId(teamId),
         getPlayersByTeamId(teamId),
         getScrims(),
-        getTeamStats(teamId)
+        getTeamStats(teamId),
+        getMyScrims(teamId)
       ]);
 
       setRequests(reqs);
       setRoster(players);
       setScrims(allScrims);
       setStats(teamStats);
+      setMyScrimIds(myScrims.map(s => s.scrimId));
     } catch (error) {
       console.error("Failed to load dashboard data:", error);
       toast({
@@ -506,6 +510,10 @@ const TeamDashboard = () => {
                             {isHost ? (
                               <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate(`/scrim/${scrim.id}`)}>
                                 Manage
+                              </Button>
+                            ) : myScrimIds.includes(scrim.id) ? (
+                              <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate(`/scrim/${scrim.id}`)}>
+                                View Details
                               </Button>
                             ) : (
                               <Button className="w-full sm:w-auto" onClick={() => openJoinDialog(scrim)}>
