@@ -308,8 +308,8 @@ const ScrimManagement = () => {
                     <div className="flex flex-col gap-2 w-full md:w-auto">
                         <Button variant="ghost" className="w-fit -ml-2" onClick={() => {
                             if (isAdmin) navigate("/admin");
-                            else if (currentTeamId) navigate("/team/dashboard");
                             else if (isPlayer) navigate("/player/dashboard");
+                            else if (currentTeamId) navigate("/team/dashboard");
                             else navigate(-1);
                         }}>
                             <ArrowLeft className="h-4 w-4 mr-2" />
