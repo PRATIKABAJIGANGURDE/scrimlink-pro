@@ -91,7 +91,14 @@ const ScrimManagement = () => {
                 setTeamPlayers(players);
             } else {
                 const player = await getCurrentPlayer();
-                if (player) setIsPlayer(true);
+                if (player) {
+                    setIsPlayer(true);
+                    if (player.teamId) {
+                        setCurrentTeamId(player.teamId);
+                        const players = await getPlayersByTeamId(player.teamId);
+                        setTeamPlayers(players);
+                    }
+                }
             }
         }
     };
