@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getPublicPlayerProfileByUsername, likePlayer, getCurrentUser, getPlayerDetailedStats } from "@/lib/storage";
-import { Users, Trophy, Calendar as CalendarIcon, Shield, ArrowLeft, Heart, Instagram, Youtube, Swords, Target, Medal, Crosshair, Crown } from "lucide-react";
+import { getPublicPlayerProfileByUsername, likePlayer, getCurrentUser, getPlayerDetailedStats, getPlayerStats } from "@/lib/storage";
+import { Users, Trophy, Calendar as CalendarIcon, Shield, ArrowLeft, Heart, Instagram, Youtube, Swords, Target, Medal, Crosshair, Crown, Share2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
 
@@ -17,6 +17,7 @@ const PublicPlayerProfile = () => {
     const [loading, setLoading] = useState(true);
     const [liking, setLiking] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
+    const [recentMatches, setRecentMatches] = useState<any[]>([]);
 
     useEffect(() => {
         const init = async () => {
@@ -44,7 +45,9 @@ const PublicPlayerProfile = () => {
         const data = await getPublicPlayerProfileByUsername(username);
         if (data && data.player) {
             const stats = await getPlayerDetailedStats(data.player.id);
+            const matches = await getPlayerStats(data.player.id);
             setProfile({ ...data, stats });
+            setRecentMatches(matches);
         } else {
             setProfile(data);
         }
@@ -78,6 +81,14 @@ const PublicPlayerProfile = () => {
         } finally {
             setLiking(false);
         }
+    };
+
+    const handleShare = () => {
+        navigator.clipboard.writeText(window.location.href);
+        toast({
+            title: "Link Copied",
+            description: "Profile link copied to clipboard",
+        });
     };
 
     if (loading) return <div className="p-8 text-center">Loading profile...</div>;
@@ -155,6 +166,10 @@ const PublicPlayerProfile = () => {
                                         <Heart className={`h-4 w-4 mr-2 group-hover:text-red-500 transition-colors ${liking ? 'animate-pulse' : ''}`} />
                                         Like ({likeCount})
                                     </Button>
+                                    <Button variant="outline" size="sm" onClick={handleShare}>
+                                        <Share2 className="h-4 w-4 mr-2" />
+                                        Share
+                                    </Button>
                                 </div>
                             </div>
                         </div>
@@ -192,6 +207,45 @@ const PublicPlayerProfile = () => {
                         </CardContent>
                     </Card>
                 </div>
+
+                {/* Recent Matches */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Target className="h-5 w-5 text-primary" />
+                            Recent Matches
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {recentMatches.length > 0 ? (
+                            <div className="space-y-4">
+                                {recentMatches.slice(0, 5).map((stat: any) => (
+                                    <div key={stat.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-muted/30 rounded-lg border border-border/50 gap-4">
+                                        <div>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="font-semibold">{stat.match.scrimName}</span>
+                                                <span className="text-muted-foreground text-sm whitespace-nowrap">- Match {stat.match.matchNumber}</span>
+                                            </div>
+                                            <div className="text-sm text-muted-foreground mt-1">
+                                                {new Date(stat.match.createdAt).toLocaleDateString()} • {stat.match.mapName || "Unknown Map"}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-6">
+                                            <div className="text-center">
+                                                <div className="text-xs text-muted-foreground uppercase">Kills</div>
+                                                <div className="font-bold text-lg">{stat.kills}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 text-muted-foreground">
+                                No recent matches found
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Current Team */}
