@@ -25,7 +25,9 @@ import {
     getScrimPlayers,
     saveScrimPlayer,
     deleteScrimPlayer,
-    getCurrentPlayer
+    getCurrentPlayer,
+    getMatchTeamStats,
+    getMatchPlayerStatsByMatchId
 } from "@/lib/storage";
 import { Scrim, Match, Team, ScrimTeam, MatchTeamStats, Player } from "@/types";
 import { Trophy, Calendar, Users, Target, ArrowLeft, Plus, Save } from "lucide-react";
@@ -281,17 +283,28 @@ const ScrimManagement = () => {
         const allScrimPlayers = await getScrimPlayers(id!);
         setAllPlayers(allScrimPlayers);
 
+        // Fetch existing stats
+        const [existingTeamStats, existingPlayerStats] = await Promise.all([
+            getMatchTeamStats(match.id),
+            getMatchPlayerStatsByMatchId(match.id)
+        ]);
+
         const initialStats: Record<string, { placement: number; players: Record<string, number> }> = {};
 
         scrimTeams.forEach(st => {
             const teamRoster = allScrimPlayers.filter((p: any) => p.teamId === st.teamId);
             const playerStats: Record<string, number> = {};
+
+            // Initialize with existing stats or 0
             teamRoster.forEach((p: any) => {
-                playerStats[p.playerId] = 0;
+                const existingStat = existingPlayerStats.find((s: any) => s.playerId === p.playerId);
+                playerStats[p.playerId] = existingStat ? existingStat.kills : 0;
             });
 
+            const existingTeamStat = existingTeamStats.find((s: any) => s.teamId === st.teamId);
+
             initialStats[st.teamId] = {
-                placement: 0,
+                placement: existingTeamStat ? existingTeamStat.placement : 0,
                 players: playerStats
             };
         });

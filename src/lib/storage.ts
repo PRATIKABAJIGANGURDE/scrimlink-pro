@@ -475,6 +475,22 @@ export const saveMatchPlayerStats = async (stats: { id: string, matchId: string,
   if (error) throw error;
 };
 
+export const getMatchPlayerStatsByMatchId = async (matchId: string) => {
+  const { data, error } = await supabase
+    .from('match_player_stats')
+    .select('*')
+    .eq('match_id', matchId);
+
+  if (error) throw error;
+  return data.map((s: any) => ({
+    ...s,
+    matchId: s.match_id,
+    playerId: s.player_id,
+    teamId: s.team_id,
+    kills: s.kills
+  }));
+};
+
 export const getMatchTeamStats = async (matchId: string): Promise<MatchTeamStats[]> => {
   const { data, error } = await supabase
     .from('match_team_stats')
