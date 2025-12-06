@@ -24,7 +24,8 @@ import {
     getPlayersByTeamId,
     getScrimPlayers,
     saveScrimPlayer,
-    deleteScrimPlayer
+    deleteScrimPlayer,
+    getCurrentPlayer
 } from "@/lib/storage";
 import { Scrim, Match, Team, ScrimTeam, MatchTeamStats, Player } from "@/types";
 import { Trophy, Calendar, Users, Target, ArrowLeft, Plus, Save } from "lucide-react";
@@ -51,6 +52,7 @@ const ScrimManagement = () => {
     // Role State
     const [isAdmin, setIsAdmin] = useState(false);
     const [currentTeamId, setCurrentTeamId] = useState<string | null>(null);
+    const [isPlayer, setIsPlayer] = useState(false);
 
     // Admin: Match Stats
     const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -87,6 +89,9 @@ const ScrimManagement = () => {
                 // Load team players for roster selection
                 const players = await getPlayersByTeamId(team.id);
                 setTeamPlayers(players);
+            } else {
+                const player = await getCurrentPlayer();
+                if (player) setIsPlayer(true);
             }
         }
     };
@@ -294,7 +299,12 @@ const ScrimManagement = () => {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div className="flex flex-col gap-2 w-full md:w-auto">
-                        <Button variant="ghost" className="w-fit -ml-2" onClick={() => navigate(isAdmin ? "/admin" : "/team/dashboard")}>
+                        <Button variant="ghost" className="w-fit -ml-2" onClick={() => {
+                            if (isAdmin) navigate("/admin");
+                            else if (currentTeamId) navigate("/team/dashboard");
+                            else if (isPlayer) navigate("/player/dashboard");
+                            else navigate(-1);
+                        }}>
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Back
                         </Button>
