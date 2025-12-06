@@ -60,8 +60,8 @@ const ScrimManagement = () => {
     const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
     const [selectedMap, setSelectedMap] = useState<string>("");
     const [savingResults, setSavingResults] = useState(false);
-    // Structure: { [teamId]: { placement: number, players: { [playerId]: kills } } }
-    const [matchStats, setMatchStats] = useState<Record<string, { placement: number; players: Record<string, number> }>>({});
+    // Structure: { [teamId]: { id?: string, placement: number, players: { [playerId]: { id?: string, kills: number } } } }
+    const [matchStats, setMatchStats] = useState<Record<string, { id?: string; placement: number; players: Record<string, { id?: string; kills: number }> }>>({});
 
     // Team: Roster Selection
     const [rosterOpen, setRosterOpen] = useState(false);
@@ -192,12 +192,12 @@ const ScrimManagement = () => {
         try {
             const statsPromises = Object.entries(matchStats).map(async ([teamId, data]) => {
                 // 1. Calculate Team Totals
-                const teamKills = Object.values(data.players).reduce((a, b) => a + b, 0);
+                const teamKills = Object.values(data.players).reduce((a, b) => a + b.kills, 0);
                 const { placementPoints, totalPoints } = calculatePoints(data.placement, teamKills);
 
                 // 2. Save Team Stats
                 const teamStats: MatchTeamStats = {
-                    id: generateId(),
+                    id: data.id || generateId(),
                     matchId: selectedMatch.id,
                     teamId,
                     placement: data.placement,
@@ -209,13 +209,13 @@ const ScrimManagement = () => {
                 await saveMatchTeamStats(teamStats);
 
                 // 3. Save Player Stats
-                const playerPromises = Object.entries(data.players).map(([playerId, kills]) => {
+                const playerPromises = Object.entries(data.players).map(([playerId, pData]) => {
                     return saveMatchPlayerStats({
-                        id: generateId(),
+                        id: pData.id || generateId(),
                         matchId: selectedMatch.id,
                         playerId,
                         teamId,
-                        kills
+                        kills: pData.kills
                     });
                 });
                 await Promise.all(playerPromises);
@@ -289,21 +289,25 @@ const ScrimManagement = () => {
             getMatchPlayerStatsByMatchId(match.id)
         ]);
 
-        const initialStats: Record<string, { placement: number; players: Record<string, number> }> = {};
+        const initialStats: Record<string, { id?: string; placement: number; players: Record<string, { id?: string; kills: number }> }> = {};
 
         scrimTeams.forEach(st => {
             const teamRoster = allScrimPlayers.filter((p: any) => p.teamId === st.teamId);
-            const playerStats: Record<string, number> = {};
+            const playerStats: Record<string, { id?: string; kills: number }> = {};
 
             // Initialize with existing stats or 0
             teamRoster.forEach((p: any) => {
                 const existingStat = existingPlayerStats.find((s: any) => s.playerId === p.playerId);
-                playerStats[p.playerId] = existingStat ? existingStat.kills : 0;
+                playerStats[p.playerId] = {
+                    id: existingStat?.id,
+                    kills: existingStat ? existingStat.kills : 0
+                };
             });
 
             const existingTeamStat = existingTeamStats.find((s: any) => s.teamId === st.teamId);
 
             initialStats[st.teamId] = {
+                id: existingTeamStat?.id,
                 placement: existingTeamStat ? existingTeamStat.placement : 0,
                 players: playerStats
             };
@@ -447,7 +451,7 @@ const ScrimManagement = () => {
                                                                         </div>
                                                                     </div>
                                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                                        {Object.entries(matchStats[st.teamId]?.players || {}).map(([playerId, kills]) => {
+                                                                        {Object.entries(matchStats[st.teamId]?.players || {}).map(([playerId, pData]) => {
                                                                             // Find player name from the fetched roster
                                                                             const player = allPlayers.find((p: any) => p.playerId === playerId);
                                                                             const displayName = player ? player.playerUsername : playerId.slice(0, 8);
@@ -459,14 +463,17 @@ const ScrimManagement = () => {
                                                                                         type="number"
                                                                                         className="w-20"
                                                                                         placeholder="Kills"
-                                                                                        value={kills}
+                                                                                        value={pData.kills}
                                                                                         onChange={(e) => setMatchStats(prev => ({
                                                                                             ...prev,
                                                                                             [st.teamId]: {
                                                                                                 ...prev[st.teamId],
                                                                                                 players: {
                                                                                                     ...prev[st.teamId].players,
-                                                                                                    [playerId]: parseInt(e.target.value) || 0
+                                                                                                    [playerId]: {
+                                                                                                        ...prev[st.teamId].players[playerId],
+                                                                                                        kills: parseInt(e.target.value) || 0
+                                                                                                    }
                                                                                                 }
                                                                                             }
                                                                                         }))}
