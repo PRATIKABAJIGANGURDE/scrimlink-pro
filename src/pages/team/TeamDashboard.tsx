@@ -19,9 +19,11 @@ import {
   saveScrim,
   saveMatch,
   generateId,
-  getTeamStats
+  getTeamStats,
+  joinScrim,
+  getScrimTeams
 } from "@/lib/storage";
-import { Team, JoinRequest, Player, Scrim, Match, MatchTeamStats } from "@/types";
+import { Team, JoinRequest, Player, Scrim, Match, MatchTeamStats, ScrimTeam } from "@/types";
 import { Trophy, Users, Copy, Check, LogOut, UserPlus, UserCheck, UserX, Target, Calendar, Plus, BarChart, Crown } from "lucide-react";
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
 import {
@@ -52,6 +54,11 @@ const TeamDashboard = () => {
     matchCount: 4,
     startTime: "",
   });
+
+  const [joiningScrim, setJoiningScrim] = useState<Scrim | null>(null);
+  const [takenSlots, setTakenSlots] = useState<number[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState<string>("");
+  const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -202,8 +209,49 @@ const TeamDashboard = () => {
       });
     }
   };
+  const openJoinDialog = async (scrim: Scrim) => {
+    setJoiningScrim(scrim);
+    try {
+      const teams = await getScrimTeams(scrim.id);
+      const taken = teams.map(t => t.slot).filter((s): s is number => s !== undefined);
+      setTakenSlots(taken);
+      setIsJoinDialogOpen(true);
+    } catch (error) {
+      console.error("Failed to load slots:", error);
+    }
+  };
+
+  const handleJoinScrim = async () => {
+    if (!team || !joiningScrim || !selectedSlot) return;
+    try {
+      await joinScrim(joiningScrim.id, team.id, team.name, parseInt(selectedSlot));
+      toast({
+        title: "Success",
+        description: `Joined ${joiningScrim.name} at Slot ${selectedSlot}`,
+      });
+      setIsJoinDialogOpen(false);
+      loadData(team.id);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to join scrim",
+        variant: "destructive"
+      });
+    }
+  };
 
   if (!team) return null;
+
+  // Separate scrims into "My Scrims" and "Open Scrims"
+  // This requires checking if the team is in the scrim. 
+  // For now, we'll just list all and show "Join" if not host.
+  // Ideally we should fetch my scrims properly.
+  // Let's assume 'scrims' contains all scrims.
+  // We can't easily know if we joined without fetching teams for all scrims.
+  // For MVP, let's just show "Join" button. If already joined, backend will error.
+  // Or better, we can fetch all my joined scrims separately?
+  // getScrims() returns ALL scrims.
+  // Let's just add the Join button for now.
 
   return (
     <div className="min-h-screen bg-background">
@@ -432,35 +480,76 @@ const TeamDashboard = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {scrims.map((scrim) => (
-                      <div key={scrim.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-muted rounded-lg border border-border">
-                        <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <Target className="h-6 w-6 text-primary" />
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-lg">{scrim.name}</h4>
-                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-muted-foreground mt-1">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {new Date(scrim.startTime || "").toLocaleString()}
-                              </span>
-                              <span>{scrim.matchCount} Matches</span>
-                              <Badge variant={scrim.status === 'upcoming' ? 'secondary' : 'default'} className="whitespace-nowrap">
-                                {scrim.status.toUpperCase()}
-                              </Badge>
+                    {scrims.map((scrim) => {
+                      const isHost = scrim.hostTeamId === team.id;
+                      return (
+                        <div key={scrim.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-muted rounded-lg border border-border">
+                          <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <Target className="h-6 w-6 text-primary" />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-lg">{scrim.name}</h4>
+                              <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-muted-foreground mt-1">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {new Date(scrim.startTime || "").toLocaleString()}
+                                </span>
+                                <span>{scrim.matchCount} Matches</span>
+                                <Badge variant={scrim.status === 'upcoming' ? 'secondary' : 'default'} className="whitespace-nowrap">
+                                  {scrim.status.toUpperCase()}
+                                </Badge>
+                              </div>
                             </div>
                           </div>
+                          <div className="flex gap-2 w-full sm:w-auto">
+                            {isHost ? (
+                              <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate(`/scrim/${scrim.id}`)}>
+                                Manage
+                              </Button>
+                            ) : (
+                              <Button className="w-full sm:w-auto" onClick={() => openJoinDialog(scrim)}>
+                                Join Scrim
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate(`/scrim/${scrim.id}`)}>
-                          Manage
-                        </Button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
             </Card>
+
+            <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Join {joiningScrim?.name}</DialogTitle>
+                  <DialogDescription>Select a slot to join this scrim</DialogDescription>
+                </DialogHeader>
+                <div className="grid grid-cols-4 gap-2 py-4">
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((slot) => {
+                    const isTaken = takenSlots.includes(slot);
+                    return (
+                      <Button
+                        key={slot}
+                        variant={selectedSlot === slot.toString() ? "default" : "outline"}
+                        disabled={isTaken}
+                        onClick={() => setSelectedSlot(slot.toString())}
+                        className={isTaken ? "opacity-50 cursor-not-allowed" : ""}
+                      >
+                        Slot {slot}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <DialogFooter>
+                  <Button onClick={handleJoinScrim} disabled={!selectedSlot}>
+                    Confirm Join
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
         </Tabs>
       </main>

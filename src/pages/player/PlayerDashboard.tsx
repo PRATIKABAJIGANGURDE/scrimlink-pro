@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getCurrentPlayer, signOut, getTeamById, getPlayerStats, getTeamStats, joinTeam } from "@/lib/storage";
-import { Player, Team } from "@/types";
-import { Users, LogOut, Target, Trophy, Clock, BarChart3, Crosshair, TrendingUp, User as UserIcon, BarChart, ArrowRight } from "lucide-react";
+import { getCurrentPlayer, signOut, getTeamById, getPlayerStats, getTeamStats, joinTeam, getScrims, joinScrim, getScrimTeams } from "@/lib/storage";
+import { Player, Team, Scrim } from "@/types";
+import { Users, LogOut, Target, Trophy, Clock, BarChart3, Crosshair, TrendingUp, User as UserIcon, BarChart, ArrowRight, Calendar } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
 import { Input } from "@/components/ui/input";
@@ -32,6 +34,13 @@ const PlayerDashboard = () => {
   const [teamStats, setTeamStats] = useState<any[]>([]);
   const [joinCode, setJoinCode] = useState("");
   const [isJoining, setIsJoining] = useState(false);
+  const [scrims, setScrims] = useState<Scrim[]>([]);
+
+  // Scrim Joining State
+  const [joiningScrim, setJoiningScrim] = useState<Scrim | null>(null);
+  const [takenSlots, setTakenSlots] = useState<number[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState<string>("");
+  const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -49,12 +58,14 @@ const PlayerDashboard = () => {
 
         if (currentPlayer.teamId) {
           try {
-            const [playerTeam, tStats] = await Promise.all([
+            const [playerTeam, tStats, allScrims] = await Promise.all([
               getTeamById(currentPlayer.teamId),
-              getTeamStats(currentPlayer.teamId)
+              getTeamStats(currentPlayer.teamId),
+              getScrims()
             ]);
             setTeam(playerTeam || null);
             setTeamStats(tStats);
+            setScrims(allScrims);
           } catch (error) {
             console.error("Failed to load team data:", error);
           }
@@ -97,6 +108,37 @@ const PlayerDashboard = () => {
       });
     } finally {
       setIsJoining(false);
+    }
+  };
+
+  const openJoinDialog = async (scrim: Scrim) => {
+    setJoiningScrim(scrim);
+    try {
+      const teams = await getScrimTeams(scrim.id);
+      const taken = teams.map(t => t.slot).filter((s): s is number => s !== undefined);
+      setTakenSlots(taken);
+      setIsJoinDialogOpen(true);
+    } catch (error) {
+      console.error("Failed to load slots:", error);
+    }
+  };
+
+  const handleJoinScrim = async () => {
+    if (!team || !joiningScrim || !selectedSlot) return;
+    try {
+      await joinScrim(joiningScrim.id, team.id, team.name, parseInt(selectedSlot));
+      toast({
+        title: "Success",
+        description: `Joined ${joiningScrim.name} at Slot ${selectedSlot}`,
+      });
+      setIsJoinDialogOpen(false);
+      // Refresh data? Ideally yes, but for now just close dialog
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to join scrim",
+        variant: "destructive"
+      });
     }
   };
 
@@ -157,173 +199,273 @@ const PlayerDashboard = () => {
       </ResponsiveNavbar>
 
       <main className="container mx-auto px-4 pt-24 md:pt-8 pb-8">
-        {/* Status Cards */}
-        {isPending && (
-          <Card className="mb-8 border-accent/50 bg-accent/5">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-accent/20 flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-accent" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Pending Approval</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Your request to join <span className="font-medium text-foreground">{team?.name || "the team"}</span> is pending.
-                    The team captain will review your request soon.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="scrims">Scrims</TabsTrigger>
+          </TabsList>
 
-        {!player.teamId && (
-          <Card className="mb-8 border-primary/20">
-            <CardHeader>
-              <CardTitle>Join a Team</CardTitle>
-              <CardDescription>Enter a team's 6-digit join code to send a request.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-4 max-w-md">
-                <div className="flex-1">
-                  <Label htmlFor="joinCode" className="sr-only">Join Code</Label>
-                  <Input
-                    id="joinCode"
-                    placeholder="Enter 6-digit code"
-                    value={joinCode}
-                    onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                    maxLength={6}
-                  />
-                </div>
-                <Button onClick={handleJoinTeam} disabled={isJoining || joinCode.length !== 6}>
-                  {isJoining ? "Joining..." : "Join Team"}
-                  {!isJoining && <ArrowRight className="ml-2 h-4 w-4" />}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Crosshair className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{totalKills}</p>
-                  <p className="text-sm text-muted-foreground">Total Kills</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center">
-                  <Target className="h-6 w-6 text-accent" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{totalMatches}</p>
-                  <p className="text-sm text-muted-foreground">Matches Played</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-secondary/10 flex items-center justify-center">
-                  <TrendingUp className="h-6 w-6 text-secondary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{avgKills}</p>
-                  <p className="text-sm text-muted-foreground">Avg Kills</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                  <Trophy className="h-6 w-6 text-yellow-500" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{booyahs}</p>
-                  <p className="text-sm text-muted-foreground">Booyahs</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+          <TabsContent value="overview">
+            {/* Status Cards */}
+            {isPending && (
+              <Card className="mb-8 border-accent/50 bg-accent/5">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-accent/20 flex items-center justify-center">
+                      <Clock className="h-6 w-6 text-accent" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Pending Approval</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Your request to join <span className="font-medium text-foreground">{team?.name || "the team"}</span> is pending.
+                        The team captain will review your request soon.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-        {/* Team Info */}
-        {
-          isApproved && team && (
-            <Card className="mb-8">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
-                    <Trophy className="h-8 w-8 text-primary" />
+            {!player.teamId && (
+              <Card className="mb-8 border-primary/20">
+                <CardHeader>
+                  <CardTitle>Join a Team</CardTitle>
+                  <CardDescription>Enter a team's 6-digit join code to send a request.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-4 max-w-md">
+                    <div className="flex-1">
+                      <Label htmlFor="joinCode" className="sr-only">Join Code</Label>
+                      <Input
+                        id="joinCode"
+                        placeholder="Enter 6-digit code"
+                        value={joinCode}
+                        onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                        maxLength={6}
+                      />
+                    </div>
+                    <Button onClick={handleJoinTeam} disabled={isJoining || joinCode.length !== 6}>
+                      {isJoining ? "Joining..." : "Join Team"}
+                      {!isJoining && <ArrowRight className="ml-2 h-4 w-4" />}
+                    </Button>
                   </div>
-                  <div>
-                    <Badge variant="secondary" className="mb-1">Team Member</Badge>
-                    <h2 className="text-2xl font-bold">{team.name}</h2>
-                    {team.country && <p className="text-sm text-muted-foreground">{team.country}</p>}
+                </CardContent>
+              </Card>
+            )}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Crosshair className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{totalKills}</p>
+                      <p className="text-sm text-muted-foreground">Total Kills</p>
+                    </div>
                   </div>
-                </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center">
+                      <Target className="h-6 w-6 text-accent" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{totalMatches}</p>
+                      <p className="text-sm text-muted-foreground">Matches Played</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-secondary/10 flex items-center justify-center">
+                      <TrendingUp className="h-6 w-6 text-secondary" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{avgKills}</p>
+                      <p className="text-sm text-muted-foreground">Avg Kills</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                      <Trophy className="h-6 w-6 text-yellow-500" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{booyahs}</p>
+                      <p className="text-sm text-muted-foreground">Booyahs</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Team Info */}
+            {
+              isApproved && team && (
+                <Card className="mb-8">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
+                        <Trophy className="h-8 w-8 text-primary" />
+                      </div>
+                      <div>
+                        <Badge variant="secondary" className="mb-1">Team Member</Badge>
+                        <h2 className="text-2xl font-bold">{team.name}</h2>
+                        {team.country && <p className="text-sm text-muted-foreground">{team.country}</p>}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            }
+
+
+
+            {/* Kills Graph */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Performance Trend</CardTitle>
+                <CardDescription>Kills per match over time</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {stats.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No matches played yet</p>
+                    <p className="text-sm">Play matches to see your performance graph</p>
+                  </div>
+                ) : (
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart
+                        data={stats.map(s => ({
+                          name: `M${s.match.matchNumber}`,
+                          kills: s.kills,
+                          fullDate: new Date(s.match.createdAt).toLocaleDateString()
+                        }))}
+                        margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient id="colorKills" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="name" className="text-xs" />
+                        <YAxis className="text-xs" />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))' }}
+                          itemStyle={{ color: 'hsl(var(--foreground))' }}
+                        />
+                        <Area type="monotone" dataKey="kills" stroke="#8884d8" fillOpacity={1} fill="url(#colorKills)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </CardContent>
             </Card>
-          )
-        }
+          </TabsContent>
 
+          <TabsContent value="scrims">
+            <Card>
+              <CardHeader>
+                <CardTitle>Scrims</CardTitle>
+                <CardDescription>Upcoming scrims and matches</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {scrims.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No scrims available</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {scrims.map((scrim) => {
+                      // Check if my team is in this scrim (we need to fetch this info or assume)
+                      // For now, we just show "Join" if IGL and "Manage" if joined (but we don't know if joined easily without fetching)
+                      // Let's rely on the user. If they click Join and are joined, it errors.
+                      // If they click Manage, they go to details.
 
+                      const isIGL = player.role === 'IGL';
 
-        {/* Kills Graph */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Performance Trend</CardTitle>
-            <CardDescription>Kills per match over time</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {stats.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No matches played yet</p>
-                <p className="text-sm">Play matches to see your performance graph</p>
-              </div>
-            ) : (
-              <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={stats.map(s => ({
-                      name: `M${s.match.matchNumber}`,
-                      kills: s.kills,
-                      fullDate: new Date(s.match.createdAt).toLocaleDateString()
-                    }))}
-                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="colorKills" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
-                        <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="name" className="text-xs" />
-                    <YAxis className="text-xs" />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))' }}
-                      itemStyle={{ color: 'hsl(var(--foreground))' }}
-                    />
-                    <Area type="monotone" dataKey="kills" stroke="#8884d8" fillOpacity={1} fill="url(#colorKills)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                      return (
+                        <div key={scrim.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-muted rounded-lg border border-border">
+                          <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <Target className="h-6 w-6 text-primary" />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-lg">{scrim.name}</h4>
+                              <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-muted-foreground mt-1">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {new Date(scrim.startTime || "").toLocaleString()}
+                                </span>
+                                <span>{scrim.matchCount} Matches</span>
+                                <Badge variant={scrim.status === 'upcoming' ? 'secondary' : 'default'} className="whitespace-nowrap">
+                                  {scrim.status.toUpperCase()}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 w-full sm:w-auto">
+                            <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate(`/scrim/${scrim.id}`)}>
+                              View Details
+                            </Button>
+                            {isIGL && scrim.status === 'upcoming' && (
+                              <Button className="w-full sm:w-auto" onClick={() => openJoinDialog(scrim)}>
+                                Join Scrim
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Join {joiningScrim?.name}</DialogTitle>
+                  <DialogDescription>Select a slot to join this scrim</DialogDescription>
+                </DialogHeader>
+                <div className="grid grid-cols-4 gap-2 py-4">
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((slot) => {
+                    const isTaken = takenSlots.includes(slot);
+                    return (
+                      <Button
+                        key={slot}
+                        variant={selectedSlot === slot.toString() ? "default" : "outline"}
+                        disabled={isTaken}
+                        onClick={() => setSelectedSlot(slot.toString())}
+                        className={isTaken ? "opacity-50 cursor-not-allowed" : ""}
+                      >
+                        Slot {slot}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <DialogFooter>
+                  <Button onClick={handleJoinScrim} disabled={!selectedSlot}>
+                    Confirm Join
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
+        </Tabs>
       </main >
     </div >
   );

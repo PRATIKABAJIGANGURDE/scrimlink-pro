@@ -372,7 +372,8 @@ export const getScrimTeams = async (scrimId: string): Promise<ScrimTeam[]> => {
     scrimId: st.scrim_id,
     teamId: st.team_id,
     teamName: st.team_name,
-    joinedAt: st.joined_at
+    joinedAt: st.joined_at,
+    slot: st.slot
   }));
 };
 
@@ -382,8 +383,52 @@ export const saveScrimTeam = async (scrimTeam: ScrimTeam): Promise<void> => {
     scrim_id: scrimTeam.scrimId,
     team_id: scrimTeam.teamId,
     team_name: scrimTeam.teamName,
-    joined_at: scrimTeam.joinedAt
+    joined_at: scrimTeam.joinedAt,
+    slot: scrimTeam.slot
   });
+  if (error) throw error;
+};
+
+export const joinScrim = async (scrimId: string, teamId: string, teamName: string, slot: number): Promise<void> => {
+  // Check if slot is taken
+  const { data: existing } = await supabase
+    .from('scrim_teams')
+    .select('*')
+    .eq('scrim_id', scrimId)
+    .eq('slot', slot)
+    .single();
+
+  if (existing) throw new Error("Slot already taken");
+
+  // Check if team already joined
+  const { data: alreadyJoined } = await supabase
+    .from('scrim_teams')
+    .select('*')
+    .eq('scrim_id', scrimId)
+    .eq('team_id', teamId)
+    .single();
+
+  if (alreadyJoined) throw new Error("Team already joined this scrim");
+
+  const scrimTeam: ScrimTeam = {
+    id: generateId(),
+    scrimId,
+    teamId,
+    teamName,
+    joinedAt: new Date().toISOString(),
+    slot
+  };
+
+  await saveScrimTeam(scrimTeam);
+};
+
+export const leaveScrim = async (scrimId: string, teamId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('scrim_teams')
+    .delete()
+    .eq('scrim_id', scrimId)
+    .eq('team_id', teamId);
+
   if (error) throw error;
 };
 

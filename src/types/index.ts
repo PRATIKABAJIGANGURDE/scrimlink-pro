@@ -79,6 +79,7 @@ export interface ScrimTeam {
   teamId: string;
   teamName: string;
   joinedAt: string;
+  slot?: number;
 }
 
 export interface TeamLineup {
