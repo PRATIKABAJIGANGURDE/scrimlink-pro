@@ -19,10 +19,10 @@ import {
     generateId,
     getTeams,
     getPlayers,
-    getMatchResults
+    getAllReportsForAdmin
 } from "@/lib/storage";
 import { Scrim, Match, Team, Player } from "@/types";
-import { Shield, LogOut, Plus, Target, Calendar, Trophy, BarChart, Users, User } from "lucide-react";
+import { Shield, LogOut, Plus, Target, Calendar, Trophy, BarChart, Users, User, AlertTriangle } from "lucide-react";
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
 import {
     AlertDialog,
@@ -44,11 +44,10 @@ const AdminDashboard = () => {
     const [scrims, setScrims] = useState<Scrim[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
     const [players, setPlayers] = useState<Player[]>([]);
+    const [reports, setReports] = useState<any[]>([]);
     const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
     const [isCreateScrimOpen, setIsCreateScrimOpen] = useState(false);
     const [creatingScrim, setCreatingScrim] = useState(false);
-    const [selectedScrimResults, setSelectedScrimResults] = useState<any[] | null>(null);
-    const [isResultsOpen, setIsResultsOpen] = useState(false);
 
     const [newScrim, setNewScrim] = useState({
         name: "",
@@ -90,14 +89,16 @@ const AdminDashboard = () => {
 
     const loadData = async () => {
         try {
-            const [allScrims, allTeams, allPlayers] = await Promise.all([
+            const [allScrims, allTeams, allPlayers, allReports] = await Promise.all([
                 getScrims(),
                 getTeams(),
-                getPlayers()
+                getPlayers(),
+                getAllReportsForAdmin(1, 100)
             ]);
             setScrims(allScrims);
             setTeams(allTeams);
             setPlayers(allPlayers);
+            setReports(allReports.data);
         } catch (error) {
             console.error("Failed to load data:", error);
             toast({
@@ -162,15 +163,6 @@ const AdminDashboard = () => {
         }
     };
 
-    const handleViewResults = async (scrimId: string) => {
-        // This is a placeholder. In a real app, you'd fetch results for all matches in the scrim
-        // and aggregate them. For now, we'll just navigate to the scrim page or show a simple message.
-        // Or better, we can fetch the results if we have an API for it.
-        // Since getMatchResults takes a matchId, we'd need to get matches first.
-        // For simplicity in this view, let's just redirect to the scrim page where results are managed.
-        navigate(`/scrim/${scrimId}`);
-    };
-
     const handleLogout = async () => {
         await signOut();
         navigate("/");
@@ -228,6 +220,10 @@ const AdminDashboard = () => {
                         <TabsTrigger value="scrims">Scrims</TabsTrigger>
                         <TabsTrigger value="teams">Teams</TabsTrigger>
                         <TabsTrigger value="players">Players</TabsTrigger>
+                        <TabsTrigger value="reports" className="flex items-center gap-2">
+                            <AlertTriangle className="h-4 w-4" />
+                            Reports
+                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="scrims" className="space-y-4">
@@ -353,8 +349,6 @@ const AdminDashboard = () => {
                             </CardContent>
                         </Card>
                     </TabsContent>
-
-
 
                     <TabsContent value="teams">
                         <Card>
@@ -485,14 +479,16 @@ const AdminDashboard = () => {
                                     <TableBody>
                                         {players.map((player) => (
                                             <TableRow key={player.id}>
-                                                <Button
-                                                    variant="link"
-                                                    className="p-0 h-auto font-medium flex items-center gap-2 text-foreground hover:text-primary"
-                                                    onClick={() => navigate(`/player/${player.username}`)}
-                                                >
-                                                    <User className="h-4 w-4 text-muted-foreground" />
-                                                    {player.inGameName || player.username}
-                                                </Button>
+                                                <TableCell className="font-medium">
+                                                    <Button
+                                                        variant="link"
+                                                        className="p-0 h-auto font-medium flex items-center gap-2 text-foreground hover:text-primary"
+                                                        onClick={() => navigate(`/player/${player.username}`)}
+                                                    >
+                                                        <User className="h-4 w-4 text-muted-foreground" />
+                                                        {player.inGameName || player.username}
+                                                    </Button>
+                                                </TableCell>
                                                 <TableCell>{player.inGameName || "-"}</TableCell>
                                                 <TableCell className="font-mono text-xs">{player.gameUid || "-"}</TableCell>
                                                 <TableCell>{player.email}</TableCell>
@@ -511,7 +507,7 @@ const AdminDashboard = () => {
                                         ))}
                                         {players.length === 0 && (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                                                <TableCell colSpan={7} className="text-center text-muted-foreground">
                                                     No players registered
                                                 </TableCell>
                                             </TableRow>
@@ -521,6 +517,75 @@ const AdminDashboard = () => {
                             </CardContent>
                         </Card>
                     </TabsContent>
+
+                    <TabsContent value="reports">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Player Reports</CardTitle>
+                                <CardDescription>View and manage reports filed against players.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Reporter</TableHead>
+                                            <TableHead>Reported Player</TableHead>
+                                            <TableHead>Reason</TableHead>
+                                            <TableHead>Scrim</TableHead>
+                                            <TableHead>Votes</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {reports.map((report) => (
+                                            <TableRow key={report.id}>
+                                                <TableCell className="text-sm text-muted-foreground">
+                                                    {new Date(report.createdAt).toLocaleDateString()}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium">{report.reporter?.username}</span>
+                                                        <span className="text-xs text-muted-foreground">{report.reporter?.inGameName}</span>
+                                                        {report.reporter?.phoneNumber && (
+                                                            <span className="text-xs text-muted-foreground">{report.reporter.phoneNumber}</span>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium text-destructive">{report.reportedPlayer?.username}</span>
+                                                        <span className="text-xs text-muted-foreground">{report.reportedPlayer?.inGameName}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="max-w-[200px] truncate" title={report.reason}>
+                                                    {report.reason}
+                                                </TableCell>
+                                                <TableCell>{report.scrimName || report.scrimId}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex gap-2">
+                                                        <Badge variant="outline" className="text-green-500 border-green-200">
+                                                            {report.likes} Likes
+                                                        </Badge>
+                                                        <Badge variant="outline" className="text-red-500 border-red-200">
+                                                            {report.dislikes} Dislikes
+                                                        </Badge>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {reports.length === 0 && (
+                                            <TableRow>
+                                                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                                                    No reports found
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
                 </Tabs>
             </main>
         </div>

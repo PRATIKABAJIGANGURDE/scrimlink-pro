@@ -182,6 +182,10 @@ export const updatePlayer = async (playerId: string, updates: Partial<Player>): 
     dbUpdates.in_game_name = updates.inGameName;
     delete dbUpdates.inGameName;
   }
+  if (updates.phoneNumber) {
+    dbUpdates.phone_number = updates.phoneNumber;
+    delete dbUpdates.phoneNumber;
+  }
   // Remove fields that shouldn't be updated or don't exist in DB if any
 
   const { error } = await supabase
@@ -695,7 +699,7 @@ export const signUpTeam = async (email: string, password: string, name: string, 
   return authData.user;
 };
 
-export const signUpPlayer = async (email: string, password: string, username: string, joinCode?: string, role?: string) => {
+export const signUpPlayer = async (email: string, password: string, username: string, joinCode?: string, role?: string, phoneNumber?: string) => {
   let teamId = null;
 
   // 1. Verify Join Code if provided
@@ -720,7 +724,8 @@ export const signUpPlayer = async (email: string, password: string, username: st
         type: 'player',
         username,
         teamId: teamId,
-        role: role || null
+        role: role || null,
+        phone_number: phoneNumber || null
       }
     }
   });
@@ -811,28 +816,13 @@ export const getAdmin = async (id: string) => {
     .eq('id', id)
     .single();
 
-  if (error && error.code !== 'PGRST116') throw error;
-  return data;
-};
-
-export const signUpAdmin = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-  });
-
-  if (error) throw error;
-  if (data.user) {
-    const { error: dbError } = await supabase.from('admins').insert({
-      id: data.user.id,
-      email: data.user.email
-    });
-    if (dbError) throw dbError;
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    return null;
   }
   return data;
 };
 
-// Scrim Players (Roster)
 export const getScrimPlayers = async (scrimId: string) => {
   const { data, error } = await supabase
     .from('scrim_players')
@@ -847,6 +837,7 @@ export const getScrimPlayers = async (scrimId: string) => {
     .eq('scrim_id', scrimId);
 
   if (error) throw error;
+
   return data.map((sp: any) => ({
     id: sp.id,
     scrimId: sp.scrim_id,
@@ -1200,4 +1191,131 @@ export const joinTeam = async (playerId: string, joinCode: string) => {
     .eq('id', playerId);
 
   return team;
+};
+
+// --- Reports System ---
+
+export const createReport = async (
+  scrimId: string,
+  reportedPlayerId: string,
+  reason: string,
+  matchId?: string
+) => {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Not logged in");
+
+  const { error } = await supabase
+    .from('reports')
+    .insert({
+      scrim_id: scrimId,
+      match_id: matchId,
+      reporter_id: user.id,
+      reported_player_id: reportedPlayerId,
+      reason
+    });
+
+  if (error) throw error;
+};
+
+export const getReportsByScrimId = async (scrimId: string) => {
+  const user = await getCurrentUser();
+  const userId = user?.id;
+
+  const { data, error } = await supabase
+    .from('reports')
+    .select(`
+      *,
+      reporter:players!reporter_id(username, in_game_name, phone_number),
+      reported_player:players!reported_player_id(username, in_game_name),
+      rv:report_votes(vote_type, voter_id)
+    `)
+    .eq('scrim_id', scrimId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return data.map((r: any) => {
+    const likes = r.rv.filter((v: any) => v.vote_type === 'like').length;
+    const dislikes = r.rv.filter((v: any) => v.vote_type === 'dislike').length;
+    const userVote = userId ? r.rv.find((v: any) => v.voter_id === userId)?.vote_type : null;
+
+    return {
+      id: r.id,
+      scrimId: r.scrim_id,
+      matchId: r.match_id,
+      reporterId: r.reporter_id,
+      reportedPlayerId: r.reported_player_id,
+      reason: r.reason,
+      createdAt: r.created_at,
+      reporter: {
+        username: r.reporter.username,
+        inGameName: r.reporter.in_game_name,
+        phoneNumber: r.reporter.phone_number
+      },
+      reportedPlayer: {
+        username: r.reported_player.username,
+        inGameName: r.reported_player.in_game_name
+      },
+      likes,
+      dislikes,
+      userVote
+    };
+  });
+};
+
+export const voteOnReport = async (reportId: string, voteType: 'like' | 'dislike') => {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Not logged in");
+
+  // Upsert vote
+  const { error } = await supabase
+    .from('report_votes')
+    .upsert({
+      report_id: reportId,
+      voter_id: user.id,
+      vote_type: voteType
+    }, { onConflict: 'report_id, voter_id' });
+
+  if (error) throw error;
+};
+
+export const getAllReportsForAdmin = async (page = 1, pageSize = 20) => {
+  const { data, error, count } = await supabase
+    .from('reports')
+    .select(`
+      *,
+      reporter:players!reporter_id(username, in_game_name, phone_number),
+      reported_player:players!reported_player_id(username, in_game_name),
+      rv:report_votes(vote_type),
+      scrim:scrims(name)
+    `, { count: 'exact' })
+    .range((page - 1) * pageSize, page * pageSize - 1)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return {
+    data: data.map((r: any) => ({
+      id: r.id,
+      scrimId: r.scrim_id,
+      scrimName: r.scrim?.name,
+      matchId: r.match_id,
+      reporterId: r.reporter_id,
+      reportedPlayerId: r.reported_player_id,
+      reason: r.reason,
+      createdAt: r.created_at,
+      reporter: {
+        username: r.reporter.username,
+        inGameName: r.reporter.in_game_name,
+        phoneNumber: r.reporter.phone_number
+      },
+      reportedPlayer: {
+        username: r.reported_player.username,
+        inGameName: r.reported_player.in_game_name
+      },
+      likes: r.rv.filter((v: any) => v.vote_type === 'like').length,
+      dislikes: r.rv.filter((v: any) => v.vote_type === 'dislike').length
+    })),
+    count: count || 0
+  };
 };

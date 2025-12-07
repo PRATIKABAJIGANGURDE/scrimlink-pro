@@ -24,6 +24,38 @@ export interface Player {
   isVerified?: boolean;
   gameUid?: string;
   inGameName?: string;
+  phoneNumber?: string;
+  createdAt: string;
+}
+
+export interface Report {
+  id: string;
+  scrimId: string;
+  matchId?: string;
+  reporterId: string;
+  reportedPlayerId: string;
+  reason: string;
+  createdAt: string;
+  // Joins
+  reporter?: {
+    username: string;
+    inGameName?: string;
+    phoneNumber?: string;
+  };
+  reportedPlayer?: {
+    username: string;
+    inGameName?: string;
+  };
+  likes?: number;
+  dislikes?: number;
+  userVote?: 'like' | 'dislike' | null;
+}
+
+export interface ReportVote {
+  id: string;
+  reportId: string;
+  voterId: string;
+  voteType: 'like' | 'dislike';
   createdAt: string;
 }
 

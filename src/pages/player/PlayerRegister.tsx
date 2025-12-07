@@ -21,6 +21,7 @@ const PlayerRegister = () => {
     email: "",
     password: "",
     confirmPassword: "",
+    phoneNumber: "",
     joinCode: "",
     role: "",
   });
@@ -62,7 +63,8 @@ const PlayerRegister = () => {
         formData.password,
         formData.username,
         undefined, // No join code
-        formData.role
+        formData.role,
+        formData.phoneNumber
       );
 
       setShowSuccess(true);
@@ -137,7 +139,6 @@ const PlayerRegister = () => {
                 required
               />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -146,6 +147,18 @@ const PlayerRegister = () => {
                 placeholder="player@example.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phoneNumber">Phone Number</Label>
+              <Input
+                id="phoneNumber"
+                type="tel"
+                placeholder="+91 1234567890"
+                value={formData.phoneNumber}
+                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                 required
               />
             </div>
@@ -193,7 +206,7 @@ const PlayerRegister = () => {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Sending Request..." : "Join Team"}
             </Button>
-          </form>
+          </form >
 
           <p className="text-center text-sm text-muted-foreground mt-6">
             Already have an account?{" "}
@@ -201,9 +214,9 @@ const PlayerRegister = () => {
               Login here
             </Link>
           </p>
-        </CardContent>
-      </Card>
-    </div>
+        </CardContent >
+      </Card >
+    </div >
   );
 };
 

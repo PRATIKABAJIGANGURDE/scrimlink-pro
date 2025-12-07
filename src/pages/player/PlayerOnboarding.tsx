@@ -15,7 +15,8 @@ const PlayerOnboarding = () => {
     const [saving, setSaving] = useState(false);
     const [formData, setFormData] = useState({
         gameUid: "",
-        inGameName: ""
+        inGameName: "",
+        phoneNumber: ""
     });
 
     useEffect(() => {
@@ -28,9 +29,13 @@ const PlayerOnboarding = () => {
                 }
 
                 // If already completed, redirect to dashboard
-                if (player.gameUid && player.inGameName) {
+                if (player.gameUid && player.inGameName && player.phoneNumber) {
                     navigate("/player/dashboard");
                     return;
+                }
+
+                if (player.phoneNumber) {
+                    setFormData(prev => ({ ...prev, phoneNumber: player.phoneNumber! }));
                 }
 
                 setLoading(false);
@@ -46,7 +51,7 @@ const PlayerOnboarding = () => {
         e.preventDefault();
         setSaving(true);
 
-        if (!formData.gameUid.trim() || !formData.inGameName.trim()) {
+        if (!formData.gameUid.trim() || !formData.inGameName.trim() || !formData.phoneNumber.trim()) {
             toast({
                 title: "Error",
                 description: "Please fill in all fields",
@@ -62,7 +67,8 @@ const PlayerOnboarding = () => {
 
             await updatePlayer(player.id, {
                 gameUid: formData.gameUid,
-                inGameName: formData.inGameName
+                inGameName: formData.inGameName,
+                phoneNumber: formData.phoneNumber
             });
 
             toast({
@@ -128,6 +134,21 @@ const PlayerOnboarding = () => {
                                     required
                                 />
                             </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="phoneNumber">Phone Number</Label>
+                            <div className="relative">
+                                <Input
+                                    id="phoneNumber"
+                                    type="tel"
+                                    placeholder="+91 1234567890"
+                                    value={formData.phoneNumber}
+                                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <p className="text-xs text-muted-foreground">Required for tournament verification.</p>
                         </div>
 
                         <Button type="submit" className="w-full" disabled={saving}>
