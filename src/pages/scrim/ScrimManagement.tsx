@@ -81,17 +81,20 @@ const ScrimManagement = () => {
 
     useEffect(() => {
         if (id) {
-            checkUser();
-            loadData(id);
+            const init = async () => {
+                const teamId = await checkUser();
+                await loadData(id, teamId);
+            };
+            init();
         }
     }, [id]);
 
     const checkUser = async () => {
         const user = await getCurrentUser();
         setCurrentUser(user);
-        if (!user) return;
+        if (!user) return null;
 
-        if (user.email === 'admin@scrimlink.pro') { // Simple admin check or use a rigorous one
+        if (user.email === 'admin@scrimlink.pro') {
             setIsAdmin(true);
         }
 
@@ -102,11 +105,13 @@ const ScrimManagement = () => {
                 setCurrentTeamId(player.teamId);
                 const players = await getPlayersByTeamId(player.teamId);
                 setTeamPlayers(players);
+                return player.teamId;
             }
         }
+        return null;
     };
 
-    const loadData = async (scrimId: string) => {
+    const loadData = async (scrimId: string, userTeamId?: string | null) => {
         try {
             const [scrimData, matchesData, teamsData, allTeams, allScrimPlayers, reportsData] = await Promise.all([
                 getScrimById(scrimId),
@@ -124,8 +129,9 @@ const ScrimManagement = () => {
             setAllPlayers(allScrimPlayers);
             setReports(reportsData);
 
-            if (currentTeamId) {
-                const myP = allScrimPlayers.filter((p: any) => p.teamId === currentTeamId).map((p: any) => p.playerId);
+            const activeTeamId = userTeamId || currentTeamId;
+            if (activeTeamId) {
+                const myP = allScrimPlayers.filter((p: any) => p.teamId === activeTeamId).map((p: any) => p.playerId);
                 setMyRoster(myP);
             }
         } catch (error) {
