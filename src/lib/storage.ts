@@ -1351,8 +1351,8 @@ export const getRecruitmentPosts = async (type?: 'LFT' | 'LFP') => {
     .from('recruitment_posts')
     .select(`
       *,
-      author:players!author_id(username, in_game_name, profile_url, role),
-      team:teams!team_id(name, logo_url)
+      author:players(username, in_game_name, profile_url, role),
+      team:teams(name, logo_url)
     `)
     .eq('status', 'active')
     .order('created_at', { ascending: false });
