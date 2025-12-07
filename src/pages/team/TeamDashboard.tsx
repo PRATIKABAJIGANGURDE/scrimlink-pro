@@ -22,7 +22,12 @@ import {
   getTeamStats,
   joinScrim,
   getScrimTeams,
-  getMyScrims
+  getMyScrims,
+  getApplicationsForTeam,
+  getTeamOffers,
+  getTransferRequestsForCaptain,
+  updateApplicationStatus,
+  approveTransferExit
 } from "@/lib/storage";
 import { Team, JoinRequest, Player, Scrim, Match, MatchTeamStats, ScrimTeam } from "@/types";
 import { Trophy, Users, Copy, Check, LogOut, UserPlus, UserCheck, UserX, Target, Calendar, Plus, BarChart, Crown } from "lucide-react";
@@ -62,6 +67,12 @@ const TeamDashboard = () => {
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
   const [myScrimIds, setMyScrimIds] = useState<string[]>([]);
 
+  // Transfer System
+  const [teamApps, setTeamApps] = useState<any[]>([]);
+  const [teamOffers, setTeamOffers] = useState<any[]>([]);
+  const [exitRequests, setExitRequests] = useState<any[]>([]);
+  const [stats, setStats] = useState<MatchTeamStats[]>([]);
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -80,16 +91,17 @@ const TeamDashboard = () => {
     init();
   }, [navigate]);
 
-  const [stats, setStats] = useState<MatchTeamStats[]>([]);
-
   const loadData = async (teamId: string) => {
     try {
-      const [reqs, players, allScrims, teamStats, myScrims] = await Promise.all([
+      const [reqs, players, allScrims, teamStats, myScrims, apps, offers, exits] = await Promise.all([
         getJoinRequestsByTeamId(teamId),
         getPlayersByTeamId(teamId),
         getScrims(),
         getTeamStats(teamId),
-        getMyScrims(teamId)
+        getMyScrims(teamId),
+        getApplicationsForTeam(teamId),
+        getTeamOffers(teamId),
+        getTransferRequestsForCaptain(teamId)
       ]);
 
       setRequests(reqs);
@@ -97,6 +109,9 @@ const TeamDashboard = () => {
       setScrims(allScrims);
       setStats(teamStats);
       setMyScrimIds(myScrims.map(s => s.scrimId));
+      setTeamApps(apps);
+      setTeamOffers(offers);
+      setExitRequests(exits);
     } catch (error) {
       console.error("Failed to load dashboard data:", error);
       toast({
@@ -104,6 +119,26 @@ const TeamDashboard = () => {
         description: "Failed to load dashboard data",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleAppApplication = async (appId: string, status: 'accepted' | 'rejected') => {
+    try {
+      await updateApplicationStatus(appId, status);
+      toast({ title: "Success", description: `Application ${status}` });
+      if (team) loadData(team.id);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleApproveExit = async (requestId: string) => {
+    try {
+      await approveTransferExit(requestId);
+      toast({ title: "Success", description: "Transfer approved. Player has left the team." });
+      if (team) loadData(team.id);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
@@ -383,7 +418,105 @@ const TeamDashboard = () => {
               )}
             </TabsTrigger>
             <TabsTrigger value="scrims">Scrims</TabsTrigger>
+            <TabsTrigger value="transfers">
+              Transfers
+              {(teamApps.length > 0 || exitRequests.length > 0) && (
+                <Badge variant="destructive" className="ml-2">{teamApps.length + exitRequests.length}</Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="transfers" className="space-y-6">
+            {/* Exit Requests (High Priority) */}
+            {exitRequests.length > 0 && (
+              <Card className="border-destructive/50">
+                <CardHeader>
+                  <CardTitle className="text-destructive flex items-center gap-2">
+                    <UserX className="h-5 w-5" />
+                    Transfer Exit Requests
+                  </CardTitle>
+                  <CardDescription>Players requesting to leave your team for another team.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {exitRequests.map(req => (
+                      <div key={req.id} className="flex items-center justify-between p-4 bg-destructive/10 rounded-lg border border-destructive/20">
+                        <div>
+                          <div className="font-bold">{req.playerName}</div>
+                          <div className="text-sm">Wants to join: <span className="font-semibold">{req.targetTeamName}</span></div>
+                        </div>
+                        <Button variant="destructive" size="sm" onClick={() => handleApproveExit(req.id)}>
+                          Approve Exit & Transfer
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Incoming Applications */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Incoming Applications</CardTitle>
+                  <CardDescription>Players applying via your LFP posts</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {teamApps.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">No pending applications</div>
+                  ) : (
+                    <div className="space-y-4">
+                      {teamApps.map(app => (
+                        <div key={app.id} className="p-4 bg-muted rounded-lg border">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <div className="font-bold">{app.player.inGameName || app.player.username}</div>
+                              <div className="text-xs text-muted-foreground">Checking: {app.postRole}</div>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => navigate(`/player/${app.player.username}`)}>View Profile</Button>
+                          </div>
+                          <p className="text-sm italic text-muted-foreground mb-4">"{app.message}"</p>
+                          <div className="flex gap-2">
+                            <Button size="sm" className="w-full" onClick={() => handleAppApplication(app.id, 'accepted')}>Accept</Button>
+                            <Button size="sm" variant="outline" className="w-full" onClick={() => handleAppApplication(app.id, 'rejected')}>Reject</Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Sent Offers */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Sent Offers</CardTitle>
+                  <CardDescription>Status of offers you sent to players</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {teamOffers.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">No active offers sent</div>
+                  ) : (
+                    <div className="space-y-4">
+                      {teamOffers.map(offer => (
+                        <div key={offer.id} className="flex items-center justify-between p-3 bg-muted rounded-lg border">
+                          <div>
+                            <div className="font-semibold">{offer.player.inGameName || offer.player.username}</div>
+                            <div className="text-xs text-muted-foreground">{new Date(offer.createdAt).toLocaleDateString()}</div>
+                          </div>
+                          <Badge variant={offer.status === 'accepted' ? 'default' : offer.status === 'rejected' ? 'destructive' : 'secondary'}>
+                            {offer.status === 'pending_exit_approval' ? 'Waiting Exit' : offer.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
 
           <TabsContent value="roster">
             <Card>

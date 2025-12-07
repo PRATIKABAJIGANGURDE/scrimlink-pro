@@ -1445,6 +1445,44 @@ export const getApplicationsForPost = async (postId: string) => {
   }));
 };
 
+export const getApplicationsForTeam = async (teamId: string) => {
+  // 1. Get all posts by this team (via author or team_id? LFP posts have team_id)
+  // LFP posts: team_id is set.
+  const { data: posts } = await supabase.from('recruitment_posts').select('id, role').eq('team_id', teamId);
+  if (!posts || posts.length === 0) return [];
+
+  const postIds = posts.map(p => p.id);
+
+  // 2. Get applications for these posts
+  const { data, error } = await supabase
+    .from('team_applications')
+    .select(`
+      *,
+      player:players(id, username, in_game_name, profile_url, role)
+    `)
+    .in('post_id', postIds)
+    .eq('status', 'pending'); // Only show pending? Or all. Let's show pending for dashboard notification.
+
+  if (error) throw error;
+
+  return data.map((app: any) => ({
+    id: app.id,
+    postId: app.post_id,
+    playerId: app.player_id,
+    status: app.status,
+    message: app.message,
+    createdAt: app.created_at,
+    player: {
+      id: app.player.id,
+      username: app.player.username,
+      inGameName: app.player.in_game_name,
+      profileUrl: app.player.profile_url,
+      role: app.player.role
+    },
+    postRole: posts.find(p => p.id === app.post_id)?.role // Helper to show what they applied for
+  }));
+};
+
 export const getMyApplications = async () => {
   const user = await getCurrentUser();
   if (!user) throw new Error("Not logged in");
@@ -1627,4 +1665,54 @@ export const getTransferRequestsForCaptain = async (captainTeamId: string) => {
     playerName: o.player.in_game_name || o.player.username,
     createdAt: o.created_at
   }));
+};
+
+export const getAllTransferActivitiesForAdmin = async (limit = 50) => {
+  const { data: apps, error: appError } = await supabase
+    .from('team_applications')
+    .select(`
+      *,
+      player:players(in_game_name, username),
+      post:recruitment_posts(team:teams(name))
+    `)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (appError) throw appError;
+
+  const { data: offers, error: offerError } = await supabase
+    .from('transfer_offers')
+    .select(`
+      *,
+      player:players(in_game_name, username),
+      team:teams(name)
+    `)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (offerError) throw offerError;
+
+  // Combine and sort
+  const combined = [
+    ...apps.map((a: any) => ({
+      type: 'application',
+      id: a.id,
+      date: new Date(a.created_at),
+      actor: a.player.in_game_name || a.player.username, // Player applying
+      target: a.post?.team?.name || 'Unknown Team',
+      status: a.status,
+      details: a.message
+    })),
+    ...offers.map((o: any) => ({
+      type: 'offer',
+      id: o.id,
+      date: new Date(o.created_at),
+      actor: o.team.name, // Team offering
+      target: o.player.in_game_name || o.player.username,
+      status: o.status, // Can be pending_exit_approval
+      details: o.message
+    }))
+  ].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, limit);
+
+  return combined;
 };

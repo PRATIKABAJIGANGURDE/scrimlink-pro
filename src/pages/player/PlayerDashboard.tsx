@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getCurrentPlayer, signOut, getTeamById, getPlayerStats, getTeamStats, joinTeam, getScrims, joinScrim, getScrimTeams } from "@/lib/storage";
-import { Player, Team, Scrim } from "@/types";
-import { Users, LogOut, Target, Trophy, Clock, BarChart3, Crosshair, TrendingUp, User as UserIcon, BarChart, ArrowRight, Calendar } from "lucide-react";
+import { getCurrentPlayer, signOut, getTeamById, getPlayerStats, getTeamStats, joinTeam, getScrims, joinScrim, getScrimTeams, getMyApplications, getMyOffers, respondToOffer } from "@/lib/storage";
+import { Player, Team, Scrim, TeamApplication, TransferOffer } from "@/types";
+import { Users, LogOut, Target, Trophy, Clock, BarChart3, Crosshair, TrendingUp, User as UserIcon, BarChart, ArrowRight, Calendar, Briefcase, Handshake } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -36,6 +37,10 @@ const PlayerDashboard = () => {
   const [isJoining, setIsJoining] = useState(false);
   const [scrims, setScrims] = useState<Scrim[]>([]);
 
+  // Transfer System
+  const [applications, setApplications] = useState<TeamApplication[]>([]);
+  const [offers, setOffers] = useState<TransferOffer[]>([]);
+
   // Scrim Joining State
   const [joiningScrim, setJoiningScrim] = useState<Scrim | null>(null);
   const [takenSlots, setTakenSlots] = useState<number[]>([]);
@@ -57,9 +62,15 @@ const PlayerDashboard = () => {
           return;
         }
 
-        // Fetch stats
-        const playerStats = await getPlayerStats(currentPlayer.id);
+        // Fetch stats & transfers
+        const [playerStats, myApps, myOffers] = await Promise.all([
+          getPlayerStats(currentPlayer.id),
+          getMyApplications(),
+          getMyOffers()
+        ]);
         setStats(playerStats);
+        setApplications(myApps);
+        setOffers(myOffers);
 
         if (currentPlayer.teamId) {
           try {
@@ -147,6 +158,17 @@ const PlayerDashboard = () => {
     }
   };
 
+  const handleOfferResponse = async (offerId: string, response: 'accepted' | 'rejected') => {
+    try {
+      await respondToOffer(offerId, response);
+      toast({ title: response === 'accepted' ? "Offer Accepted" : "Offer Rejected", description: response === 'accepted' ? "Action successful." : "You rejected the offer." });
+      const updatedOffers = await getMyOffers();
+      setOffers(updatedOffers);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
   if (!player) return null;
 
   const isPending = player.status === 'pending';
@@ -176,6 +198,11 @@ const PlayerDashboard = () => {
         <Button variant="outline" size="sm" onClick={() => navigate("/rankings")}>
           <Trophy className="h-4 w-4 mr-2" />
           Rankings
+        </Button>
+
+        <Button variant="outline" size="sm" onClick={() => navigate("/recruitment")}>
+          <Briefcase className="h-4 w-4 mr-2" />
+          Recruitment
         </Button>
         <Button variant="outline" size="sm" onClick={() => navigate("/match-results")}>
           <BarChart className="h-4 w-4 mr-2" />
@@ -208,7 +235,80 @@ const PlayerDashboard = () => {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="scrims">Scrims</TabsTrigger>
+            <TabsTrigger value="transfers">Transfers</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="transfers" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* My Applications */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>My Applications</CardTitle>
+                  <CardDescription>Status of your applications to teams</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {applications.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">No active applications</div>
+                  ) : (
+                    <div className="space-y-4">
+                      {applications.map(app => (
+                        <div key={app.id} className="flex items-center justify-between p-3 bg-muted rounded-lg border">
+                          <div>
+                            <div className="font-semibold">{app.post?.team?.name || 'Unknown Team'}</div>
+                            <div className="text-xs text-muted-foreground">Role: {app.post?.role}</div>
+                          </div>
+                          <Badge variant={app.status === 'accepted' ? 'default' : app.status === 'rejected' ? 'destructive' : 'secondary'}>
+                            {app.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Incoming Offers */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Incoming Offers</CardTitle>
+                  <CardDescription>Teams that want you!</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {offers.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">No pending offers</div>
+                  ) : (
+                    <div className="space-y-4">
+                      {offers.map(offer => (
+                        <div key={offer.id} className="p-4 bg-muted rounded-lg border">
+                          <div className="flex items-center gap-3 mb-2">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={offer.team?.logoUrl} />
+                              <AvatarFallback>{offer.team?.name?.substring(0, 2)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-bold">{offer.team?.name}</div>
+                              <div className="text-xs text-muted-foreground">{new Date(offer.createdAt).toLocaleDateString()}</div>
+                            </div>
+                          </div>
+                          <p className="text-sm italic text-muted-foreground mb-4">"{offer.message}"</p>
+                          <div className="flex gap-2">
+                            {offer.status === 'pending' ? (
+                              <>
+                                <Button size="sm" className="w-full" onClick={() => handleOfferResponse(offer.id, 'accepted')}>Accept</Button>
+                                <Button size="sm" variant="outline" className="w-full" onClick={() => handleOfferResponse(offer.id, 'rejected')}>Reject</Button>
+                              </>
+                            ) : (
+                              <Badge variant="outline" className="w-full justify-center">{offer.status.toUpperCase()}</Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
           <TabsContent value="overview">
             {/* Status Cards */}

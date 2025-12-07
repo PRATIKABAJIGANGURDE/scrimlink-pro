@@ -19,7 +19,8 @@ import {
     generateId,
     getTeams,
     getPlayers,
-    getAllReportsForAdmin
+    getAllReportsForAdmin,
+    getAllTransferActivitiesForAdmin
 } from "@/lib/storage";
 import { Scrim, Match, Team, Player } from "@/types";
 import { Shield, LogOut, Plus, Target, Calendar, Trophy, BarChart, Users, User, AlertTriangle } from "lucide-react";
@@ -45,6 +46,7 @@ const AdminDashboard = () => {
     const [teams, setTeams] = useState<Team[]>([]);
     const [players, setPlayers] = useState<Player[]>([]);
     const [reports, setReports] = useState<any[]>([]);
+    const [transfers, setTransfers] = useState<any[]>([]);
     const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
     const [isCreateScrimOpen, setIsCreateScrimOpen] = useState(false);
     const [creatingScrim, setCreatingScrim] = useState(false);
@@ -89,16 +91,18 @@ const AdminDashboard = () => {
 
     const loadData = async () => {
         try {
-            const [allScrims, allTeams, allPlayers, allReports] = await Promise.all([
+            const [allScrims, allTeams, allPlayers, allReports, allTransfers] = await Promise.all([
                 getScrims(),
                 getTeams(),
                 getPlayers(),
-                getAllReportsForAdmin(1, 100)
+                getAllReportsForAdmin(1, 100),
+                getAllTransferActivitiesForAdmin(100)
             ]);
             setScrims(allScrims);
             setTeams(allTeams);
             setPlayers(allPlayers);
             setReports(allReports.data);
+            setTransfers(allTransfers);
         } catch (error) {
             console.error("Failed to load data:", error);
             toast({
@@ -224,6 +228,7 @@ const AdminDashboard = () => {
                             <AlertTriangle className="h-4 w-4" />
                             Reports
                         </TabsTrigger>
+                        <TabsTrigger value="transfers">Transfers</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="scrims" className="space-y-4">
@@ -579,6 +584,57 @@ const AdminDashboard = () => {
                                                     No reports found
                                                 </TableCell>
                                             </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    <TabsContent value="transfers">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Transfer Activity Log</CardTitle>
+                                <CardDescription>Monitor all recruitment applications and transfer offers.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Type</TableHead>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Actor</TableHead>
+                                            <TableHead>Target</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Details</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {transfers.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={6} className="text-center">No activity found</TableCell>
+                                            </TableRow>
+                                        ) : (
+                                            transfers.map((t) => (
+                                                <TableRow key={`${t.type}-${t.id}`}>
+                                                    <TableCell>
+                                                        <Badge variant={t.type === 'application' ? 'default' : 'secondary'}>
+                                                            {t.type.toUpperCase()}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell>{t.date.toLocaleString()}</TableCell>
+                                                    <TableCell className="font-medium">{t.actor}</TableCell>
+                                                    <TableCell>{t.target}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={t.status === 'accepted' ? 'outline' : t.status === 'rejected' ? 'destructive' : t.status === 'pending_exit_approval' ? 'secondary' : 'default'}>
+                                                            {t.status.toUpperCase()}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="max-w-xs truncate" title={t.details}>
+                                                        {t.details}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
                                         )}
                                     </TableBody>
                                 </Table>

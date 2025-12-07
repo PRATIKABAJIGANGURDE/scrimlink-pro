@@ -160,7 +160,7 @@ export interface TeamApplication {
     role?: string;
     kd?: number; // Calculated or stored
   };
-  post?: RecruitmentPost;
+  post?: Partial<RecruitmentPost>;
 }
 
 export interface TransferOffer {
