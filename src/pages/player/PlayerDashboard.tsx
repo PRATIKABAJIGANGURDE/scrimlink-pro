@@ -164,7 +164,7 @@ const PlayerDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <ResponsiveNavbar
-        title={player.username}
+        title={player.inGameName || player.username}
         subtitle="Player Dashboard"
         variant="dashboard"
         icon={<Users className="h-8 w-8 text-primary" />}

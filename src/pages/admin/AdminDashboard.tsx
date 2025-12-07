@@ -434,7 +434,7 @@ const AdminDashboard = () => {
                                                             onClick={() => navigate(`/player/${player.username}`)}
                                                         >
                                                             <User className="h-4 w-4 text-muted-foreground" />
-                                                            {player.username}
+                                                            {player.inGameName || player.username}
                                                         </Button>
                                                     </TableCell>
                                                     <TableCell>{player.email}</TableCell>
@@ -491,7 +491,7 @@ const AdminDashboard = () => {
                                                     onClick={() => navigate(`/player/${player.username}`)}
                                                 >
                                                     <User className="h-4 w-4 text-muted-foreground" />
-                                                    {player.username}
+                                                    {player.inGameName || player.username}
                                                 </Button>
                                                 <TableCell>{player.inGameName || "-"}</TableCell>
                                                 <TableCell className="font-mono text-xs">{player.gameUid || "-"}</TableCell>

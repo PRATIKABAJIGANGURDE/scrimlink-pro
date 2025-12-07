@@ -371,7 +371,7 @@ const ScrimManagement = () => {
                                                     }
                                                 }}
                                             />
-                                            <Label>{player.username}</Label>
+                                            <Label>{player.inGameName || player.username}</Label>
                                         </div>
                                     ))}
                                 </div>
@@ -452,9 +452,8 @@ const ScrimManagement = () => {
                                                                     </div>
                                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                                         {Object.entries(matchStats[st.teamId]?.players || {}).map(([playerId, pData]) => {
-                                                                            // Find player name from the fetched roster
                                                                             const player = allPlayers.find((p: any) => p.playerId === playerId);
-                                                                            const displayName = player ? player.playerUsername : playerId.slice(0, 8);
+                                                                            const displayName = player ? (player.playerInGameName || player.playerUsername) : playerId.slice(0, 8);
 
                                                                             return (
                                                                                 <div key={playerId} className="flex items-center justify-between">

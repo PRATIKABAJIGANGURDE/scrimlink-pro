@@ -106,7 +106,7 @@ const PlayerProfile = () => {
     return (
         <div className="min-h-screen bg-background">
             <ResponsiveNavbar
-                title={player.username}
+                title={player.inGameName || player.username}
                 subtitle="Player Profile"
                 variant="dashboard"
                 icon={<Users className="h-8 w-8 text-primary" />}
@@ -141,7 +141,7 @@ const PlayerProfile = () => {
                             <Avatar className="h-32 w-32 border-4 border-primary/20">
                                 <AvatarImage src={player.profileUrl} alt={player.username} />
                                 <AvatarFallback className="text-4xl font-bold bg-primary/10">
-                                    {player.username.substring(0, 2).toUpperCase()}
+                                    {(player.inGameName || player.username).substring(0, 2).toUpperCase()}
                                 </AvatarFallback>
                             </Avatar>
 
@@ -149,7 +149,7 @@ const PlayerProfile = () => {
                             <div className="flex-1 space-y-6 w-full">
                                 <div className="space-y-4">
                                     <div>
-                                        <h2 className="text-3xl font-bold mb-2">{player.username}</h2>
+                                        <h2 className="text-3xl font-bold mb-2">{player.inGameName || player.username}</h2>
                                         <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
                                             <span className="flex items-center gap-2">
                                                 <Mail className="h-4 w-4" />

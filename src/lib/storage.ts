@@ -840,7 +840,8 @@ export const getScrimPlayers = async (scrimId: string) => {
       *,
       player:players (
         username,
-        email
+        email,
+        in_game_name
       )
     `)
     .eq('scrim_id', scrimId);
@@ -852,7 +853,8 @@ export const getScrimPlayers = async (scrimId: string) => {
     teamId: sp.team_id,
     playerId: sp.player_id,
     playerUsername: sp.player.username,
-    playerEmail: sp.player.email
+    playerEmail: sp.player.email,
+    playerInGameName: sp.player.in_game_name
   }));
 };
 

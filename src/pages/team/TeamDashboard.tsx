@@ -404,11 +404,11 @@ const TeamDashboard = () => {
                       <div key={player.id} className="flex flex-wrap items-center justify-between gap-4 p-4 bg-muted rounded-lg">
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                            <span className="font-semibold">{player.username[0].toUpperCase()}</span>
+                            <span className="font-semibold">{(player.inGameName || player.username)[0].toUpperCase()}</span>
                           </div>
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="font-medium">{player.username}</p>
+                              <p className="font-medium">{player.inGameName || player.username}</p>
                               {player.role === 'IGL' && <Badge variant="default" className="text-xs">IGL</Badge>}
                               {player.role && player.role !== 'IGL' && <Badge variant="outline" className="text-xs">{player.role}</Badge>}
                             </div>

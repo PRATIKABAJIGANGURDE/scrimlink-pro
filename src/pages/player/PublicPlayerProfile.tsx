@@ -99,7 +99,7 @@ const PublicPlayerProfile = () => {
     return (
         <div className="min-h-screen bg-background">
             <ResponsiveNavbar
-                title={player.username}
+                title={player.inGameName || player.username}
                 subtitle="Player Profile"
                 variant="dashboard"
                 icon={<Users className="h-8 w-8 text-primary" />}
@@ -118,13 +118,13 @@ const PublicPlayerProfile = () => {
                             <Avatar className="h-32 w-32 border-4 border-primary/20">
                                 <AvatarImage src={player.profileUrl} alt={player.username} />
                                 <AvatarFallback className="text-4xl font-bold bg-primary/10">
-                                    {player.username.substring(0, 2).toUpperCase()}
+                                    {(player.inGameName || player.username).substring(0, 2).toUpperCase()}
                                 </AvatarFallback>
                             </Avatar>
 
                             <div className="flex-1 text-center md:text-left space-y-4">
                                 <div>
-                                    <h1 className="text-3xl font-bold mb-2">{player.username}</h1>
+                                    <h1 className="text-3xl font-bold mb-2">{player.inGameName || player.username}</h1>
                                     <div className="flex flex-wrap justify-center md:justify-start items-center gap-4 text-muted-foreground">
                                         <span className="flex items-center gap-2">
                                             <CalendarIcon className="h-4 w-4" />
