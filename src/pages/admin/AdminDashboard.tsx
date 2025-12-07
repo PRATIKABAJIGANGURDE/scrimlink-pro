@@ -474,6 +474,8 @@ const AdminDashboard = () => {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Username</TableHead>
+                                            <TableHead>In-Game Name</TableHead>
+                                            <TableHead>Game UID</TableHead>
                                             <TableHead>Email</TableHead>
                                             <TableHead>Team</TableHead>
                                             <TableHead>Status</TableHead>
@@ -491,6 +493,8 @@ const AdminDashboard = () => {
                                                     <User className="h-4 w-4 text-muted-foreground" />
                                                     {player.username}
                                                 </Button>
+                                                <TableCell>{player.inGameName || "-"}</TableCell>
+                                                <TableCell className="font-mono text-xs">{player.gameUid || "-"}</TableCell>
                                                 <TableCell>{player.email}</TableCell>
                                                 <TableCell>
                                                     <Badge variant="outline">

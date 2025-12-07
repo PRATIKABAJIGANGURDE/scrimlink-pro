@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getCurrentPlayer, signOut, getTeamById, leaveTeam, updatePlayerSocials } from "@/lib/storage";
+import { getCurrentPlayer, signOut, getTeamById, leaveTeam, updatePlayerSocials, updatePlayer } from "@/lib/storage";
 import { Player, Team } from "@/types";
-import { Users, LogOut, Trophy, UserMinus, Mail, Calendar as CalendarIcon, Shield, ArrowLeft, Crown, BarChart, Instagram, Youtube, Save } from "lucide-react";
+import { Users, LogOut, Trophy, UserMinus, Mail, Calendar as CalendarIcon, Shield, ArrowLeft, Crown, BarChart, Instagram, Youtube, Save, Target, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
@@ -211,6 +211,69 @@ const PlayerProfile = () => {
                                     </Button>
                                 </div>
                             </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="mb-8">
+                    <CardHeader>
+                        <CardTitle>Game Information</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid gap-4 max-w-md">
+                            <div className="grid gap-2">
+                                <Label htmlFor="gameUid">Free Fire UID</Label>
+                                <div className="relative">
+                                    <Target className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="gameUid"
+                                        placeholder="12345678"
+                                        className="pl-9"
+                                        value={player.gameUid || ""}
+                                        onChange={(e) => setPlayer({ ...player, gameUid: e.target.value })}
+                                        disabled={isSaving}
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="inGameName">In-Game Name</Label>
+                                <div className="relative">
+                                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="inGameName"
+                                        placeholder="Your IGN"
+                                        className="pl-9"
+                                        value={player.inGameName || ""}
+                                        onChange={(e) => setPlayer({ ...player, inGameName: e.target.value })}
+                                        disabled={isSaving}
+                                    />
+                                </div>
+                            </div>
+                            <Button onClick={async () => {
+                                setIsSaving(true);
+                                try {
+                                    await updatePlayer(player.id, {
+                                        gameUid: player.gameUid,
+                                        inGameName: player.inGameName
+                                    });
+                                    toast({
+                                        title: "Profile Updated",
+                                        description: "Game details saved successfully"
+                                    });
+                                } catch (error) {
+                                    console.error("Failed to save game details:", error);
+                                    toast({
+                                        title: "Error",
+                                        description: "Failed to save game details",
+                                        variant: "destructive"
+                                    });
+                                } finally {
+                                    setIsSaving(false);
+                                }
+                            }} disabled={isSaving} className="w-fit">
+                                <Save className="h-4 w-4 mr-2" />
+                                {isSaving ? "Saving..." : "Save Game Details"}
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>

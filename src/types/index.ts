@@ -22,6 +22,8 @@ export interface Player {
   instagramUrl?: string;
   youtubeUrl?: string;
   isVerified?: boolean;
+  gameUid?: string;
+  inGameName?: string;
   createdAt: string;
 }
 

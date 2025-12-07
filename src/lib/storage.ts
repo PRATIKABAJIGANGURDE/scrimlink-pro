@@ -93,6 +93,8 @@ export const getPlayers = async (): Promise<Player[]> => {
   return data.map((p: any) => ({
     ...p,
     teamId: p.team_id,
+    gameUid: p.game_uid,
+    inGameName: p.in_game_name,
     createdAt: p.created_at
   }));
 };
@@ -123,6 +125,8 @@ export const getPlayerByEmail = async (email: string): Promise<Player | null> =>
   return {
     ...data,
     teamId: data.team_id,
+    gameUid: data.game_uid,
+    inGameName: data.in_game_name,
     createdAt: data.created_at
   };
 };
@@ -140,6 +144,8 @@ export const getPlayerById = async (id: string): Promise<Player | null> => {
   return {
     ...data,
     teamId: data.team_id,
+    gameUid: data.game_uid,
+    inGameName: data.in_game_name,
     createdAt: data.created_at
   };
 };
@@ -155,6 +161,8 @@ export const getPlayersByTeamId = async (teamId: string): Promise<Player[]> => {
   return data.map((p: any) => ({
     ...p,
     teamId: p.team_id,
+    gameUid: p.game_uid,
+    inGameName: p.in_game_name,
     createdAt: p.created_at
   }));
 };
@@ -165,6 +173,14 @@ export const updatePlayer = async (playerId: string, updates: Partial<Player>): 
   if (updates.teamId) {
     dbUpdates.team_id = updates.teamId;
     delete dbUpdates.teamId;
+  }
+  if (updates.gameUid) {
+    dbUpdates.game_uid = updates.gameUid;
+    delete dbUpdates.gameUid;
+  }
+  if (updates.inGameName) {
+    dbUpdates.in_game_name = updates.inGameName;
+    delete dbUpdates.inGameName;
   }
   // Remove fields that shouldn't be updated or don't exist in DB if any
 
@@ -777,6 +793,8 @@ export const getCurrentPlayer = async () => {
     teamId: data.team_id,
     instagramUrl: data.instagram_url,
     youtubeUrl: data.youtube_url,
+    gameUid: data.game_uid,
+    inGameName: data.in_game_name,
     createdAt: data.created_at
   };
 };
