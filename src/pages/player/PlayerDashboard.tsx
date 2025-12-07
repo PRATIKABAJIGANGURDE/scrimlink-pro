@@ -52,6 +52,11 @@ const PlayerDashboard = () => {
         }
         setPlayer(currentPlayer);
 
+        if (!currentPlayer.gameUid || !currentPlayer.inGameName) {
+          navigate("/player/onboarding");
+          return;
+        }
+
         // Fetch stats
         const playerStats = await getPlayerStats(currentPlayer.id);
         setStats(playerStats);

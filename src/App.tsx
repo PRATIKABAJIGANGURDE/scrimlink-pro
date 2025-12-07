@@ -9,6 +9,7 @@ import TeamLogin from "./pages/team/TeamLogin";
 import TeamDashboard from "./pages/team/TeamDashboard";
 import PlayerRegister from "./pages/player/PlayerRegister";
 import PlayerLogin from "./pages/player/PlayerLogin";
+import PlayerOnboarding from "./pages/player/PlayerOnboarding";
 import PlayerDashboard from "./pages/player/PlayerDashboard";
 import PlayerProfile from "./pages/player/PlayerProfile";
 import PublicPlayerProfile from "./pages/player/PublicPlayerProfile";
@@ -42,6 +43,7 @@ const App = () => (
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/player/register" element={<PlayerRegister />} />
           <Route path="/player/login" element={<PlayerLogin />} />
+          <Route path="/player/onboarding" element={<PlayerOnboarding />} />
           <Route path="/player/dashboard" element={<PlayerDashboard />} />
           <Route path="/player/profile" element={<PlayerProfile />} />
           <Route path="/player/:username" element={<PublicPlayerProfile />} />

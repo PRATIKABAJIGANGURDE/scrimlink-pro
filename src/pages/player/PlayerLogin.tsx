@@ -26,7 +26,11 @@ const PlayerLogin = () => {
         // Verify if the user is actually a player
         const player = await getCurrentPlayer();
         if (player) {
-          navigate("/player/dashboard");
+          if (!player.gameUid || !player.inGameName) {
+            navigate("/player/onboarding");
+          } else {
+            navigate("/player/dashboard");
+          }
         } else {
           // User is logged in but not as a player (likely a team)
           toast({
@@ -58,7 +62,12 @@ const PlayerLogin = () => {
         title: "Welcome back!",
         description: "Logged in successfully",
       });
-      navigate("/player/dashboard");
+
+      if (!player.gameUid || !player.inGameName) {
+        navigate("/player/onboarding");
+      } else {
+        navigate("/player/dashboard");
+      }
     } catch (error: any) {
       console.error(error);
       toast({
