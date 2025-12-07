@@ -29,7 +29,8 @@ import {
     getMatchPlayerStatsByMatchId,
     createReport,
     getReportsByScrimId,
-    voteOnReport
+    voteOnReport,
+    getAdmin
 } from "@/lib/storage";
 import { Scrim, Match, Team, ScrimTeam, MatchTeamStats, Player, Report } from "@/types";
 import { Trophy, Calendar, Users, ArrowLeft, Plus, Flag, ThumbsUp, ThumbsDown, ShieldAlert } from "lucide-react";
@@ -94,8 +95,13 @@ const ScrimManagement = () => {
         setCurrentUser(user);
         if (!user) return null;
 
-        if (user.email === 'admin@scrimlink.pro') {
+        const admin = await getAdmin(user.id);
+        if (admin) {
             setIsAdmin(true);
+        }
+
+        if (user.email === 'admin@scrimlink.pro') {
+            setIsAdmin(true); // Fallback for original admin
         }
 
         const player = await getCurrentPlayer();
