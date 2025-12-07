@@ -1319,3 +1319,312 @@ export const getAllReportsForAdmin = async (page = 1, pageSize = 20) => {
     count: count || 0
   };
 };
+
+// --- Recruitment Center ---
+
+export const createRecruitmentPost = async (
+  type: 'LFT' | 'LFP',
+  role: string,
+  description: string,
+  minKd: number = 0,
+  teamId?: string
+) => {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Not logged in");
+
+  const { error } = await supabase
+    .from('recruitment_posts')
+    .insert({
+      type,
+      author_id: user.id,
+      team_id: teamId,
+      role,
+      description,
+      min_kd: minKd
+    });
+
+  if (error) throw error;
+};
+
+export const getRecruitmentPosts = async (type?: 'LFT' | 'LFP') => {
+  let query = supabase
+    .from('recruitment_posts')
+    .select(`
+      *,
+      author:players!author_id(username, in_game_name, profile_url, role),
+      team:teams!team_id(name, logo_url)
+    `)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false });
+
+  if (type) {
+    query = query.eq('type', type);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return data.map((post: any) => ({
+    id: post.id,
+    type: post.type,
+    authorId: post.author_id,
+    teamId: post.team_id,
+    role: post.role,
+    description: post.description,
+    minKd: post.min_kd,
+    status: post.status,
+    createdAt: post.created_at,
+    author: {
+      username: post.author.username,
+      inGameName: post.author.in_game_name,
+      profileUrl: post.author.profile_url,
+      role: post.author.role
+    },
+    team: post.team ? {
+      name: post.team.name,
+      logoUrl: post.team.logo_url
+    } : undefined
+  }));
+};
+
+export const closeRecruitmentPost = async (postId: string) => {
+  const { error } = await supabase
+    .from('recruitment_posts')
+    .update({ status: 'closed' })
+    .eq('id', postId);
+
+  if (error) throw error;
+};
+
+export const deleteRecruitmentPost = async (postId: string) => {
+  const { error } = await supabase
+    .from('recruitment_posts')
+    .delete()
+    .eq('id', postId);
+
+  if (error) throw error;
+};
+
+// --- Advanced Transfer System ---
+
+export const applyToTeam = async (postId: string, message: string) => {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Not logged in");
+
+  const { error } = await supabase.from('team_applications').insert({
+    post_id: postId,
+    player_id: user.id,
+    message
+  });
+  if (error) throw error;
+};
+
+export const getApplicationsForPost = async (postId: string) => {
+  const { data, error } = await supabase
+    .from('team_applications')
+    .select(`
+      *,
+      player:players(username, in_game_name, profile_url, role)
+    `)
+    .eq('post_id', postId);
+  if (error) throw error;
+
+  return data.map((app: any) => ({
+    id: app.id,
+    postId: app.post_id,
+    playerId: app.player_id,
+    status: app.status,
+    message: app.message,
+    createdAt: app.created_at,
+    player: {
+      username: app.player.username,
+      inGameName: app.player.in_game_name,
+      profileUrl: app.player.profile_url,
+      role: app.player.role
+    }
+  }));
+};
+
+export const getMyApplications = async () => {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Not logged in");
+
+  const { data, error } = await supabase
+    .from('team_applications')
+    .select(`
+      *,
+      post:recruitment_posts(
+        role,
+        team:teams(name, logo_url)
+      )
+    `)
+    .eq('player_id', user.id);
+  if (error) throw error;
+
+  return data.map((app: any) => ({
+    id: app.id,
+    postId: app.post_id,
+    playerId: app.player_id,
+    status: app.status,
+    message: app.message,
+    createdAt: app.created_at,
+    post: {
+      role: app.post.role,
+      team: {
+        name: app.post.team.name,
+        logoUrl: app.post.team.logo_url
+      }
+    }
+  }));
+};
+
+export const updateApplicationStatus = async (appId: string, status: 'accepted' | 'rejected') => {
+  const { error } = await supabase
+    .from('team_applications')
+    .update({ status })
+    .eq('id', appId);
+  if (error) throw error;
+
+  // If accepted, add player to team (Simplified flow: Direct Join)
+  // In a real strict system, this might trigger a transfer offer instead.
+  // For now, we assume if you apply to a team, you are ready to join.
+  if (status === 'accepted') {
+    // 1. Get Application details
+    const { data: app } = await supabase.from('team_applications').select('player_id, post_id').eq('id', appId).single();
+    if (app) {
+      const { data: post } = await supabase.from('recruitment_posts').select('team_id').eq('id', app.post_id).single();
+      if (post && post.team_id) {
+        // 2. Add player to team (Update player table)
+        await supabase.from('players').update({ team_id: post.team_id }).eq('id', app.player_id);
+      }
+    }
+  }
+};
+
+export const sendTransferOffer = async (teamId: string, playerId: string, message: string) => {
+  const { error } = await supabase.from('transfer_offers').insert({
+    team_id: teamId,
+    player_id: playerId,
+    message
+  });
+  if (error) throw error;
+};
+
+export const getMyOffers = async () => { // For Players
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Not logged in");
+
+  const { data, error } = await supabase
+    .from('transfer_offers')
+    .select(`
+      *,
+      team:teams(name, logo_url)
+    `)
+    .eq('player_id', user.id)
+    .neq('status', 'rejected'); // Don't show rejected offers? Or show history.
+  if (error) throw error;
+
+  return data.map((o: any) => ({
+    id: o.id,
+    teamId: o.team_id,
+    playerId: o.player_id,
+    status: o.status,
+    message: o.message,
+    createdAt: o.created_at,
+    team: {
+      name: o.team.name,
+      logoUrl: o.team.logo_url
+    }
+  }));
+};
+
+export const getTeamOffers = async (teamId: string) => { // For Teams
+  const { data, error } = await supabase
+    .from('transfer_offers')
+    .select(`
+      *,
+      player:players(username, in_game_name)
+    `)
+    .eq('team_id', teamId);
+  if (error) throw error;
+
+  return data.map((o: any) => ({
+    id: o.id,
+    teamId: o.team_id,
+    playerId: o.player_id,
+    status: o.status,
+    message: o.message,
+    createdAt: o.created_at,
+    player: {
+      username: o.player.username,
+      inGameName: o.player.in_game_name
+    }
+  }));
+};
+
+export const respondToOffer = async (offerId: string, response: 'accepted' | 'rejected') => {
+  if (response === 'rejected') {
+    const { error } = await supabase.from('transfer_offers').update({ status: 'rejected' }).eq('id', offerId);
+    if (error) throw error;
+    return;
+  }
+
+  // If Accepted:
+  // Check if player is already in a team
+  const user = await getCurrentUser();
+  const { data: player } = await supabase.from('players').select('team_id').eq('id', user.id).single();
+
+  if (player?.team_id) {
+    // Player has a team -> Set status to 'pending_exit_approval'
+    await supabase.from('transfer_offers').update({ status: 'pending_exit_approval' }).eq('id', offerId);
+  } else {
+    // Player is free -> Transfer immediately
+    const { data: offer } = await supabase.from('transfer_offers').select('team_id').eq('id', offerId).single();
+    if (offer) {
+      await supabase.from('players').update({ team_id: offer.team_id }).eq('id', user.id);
+      await supabase.from('transfer_offers').update({ status: 'accepted' }).eq('id', offerId);
+    }
+  }
+};
+
+export const approveTransferExit = async (offerId: string) => {
+  // 1. Get offer details
+  const { data: offer } = await supabase.from('transfer_offers').select('*').eq('id', offerId).single();
+  if (!offer) throw new Error("Offer not found");
+
+  // 2. Transfer Player
+  await supabase.from('players').update({ team_id: offer.team_id }).eq('id', offer.player_id);
+
+  // 3. Mark offer as accepted
+  await supabase.from('transfer_offers').update({ status: 'accepted' }).eq('id', offerId);
+};
+
+export const getTransferRequestsForCaptain = async (captainTeamId: string) => {
+  // Find offers where status is 'pending_exit_approval' AND player is currently in captain's team
+  // This is a bit complex relational query.
+  // Step 1: Find players in my team
+  const { data: players } = await supabase.from('players').select('id').eq('team_id', captainTeamId);
+  const playerIds = players?.map((p: any) => p.id) || [];
+
+  if (playerIds.length === 0) return [];
+
+  // Step 2: Find offers for these players with status 'pending_exit_approval'
+  const { data, error } = await supabase
+    .from('transfer_offers')
+    .select(`
+      *,
+      player:players(username, in_game_name),
+      target_team:teams!transfer_offers_team_id_fkey(name)
+    `) // Note: joined team is the TARGET team (the one offering)
+    .in('player_id', playerIds)
+    .eq('status', 'pending_exit_approval');
+
+  if (error) throw error;
+
+  return data.map((o: any) => ({
+    id: o.id,
+    targetTeamName: o.target_team.name,
+    playerName: o.player.in_game_name || o.player.username,
+    createdAt: o.created_at
+  }));
+};

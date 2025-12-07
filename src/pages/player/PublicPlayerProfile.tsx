@@ -3,8 +3,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { getPublicPlayerProfileByUsername, likePlayer, getCurrentUser, getPlayerDetailedStats, getPlayerStats } from "@/lib/storage";
+import { getPublicPlayerProfileByUsername, likePlayer, getCurrentUser, getPlayerDetailedStats, getPlayerStats, sendTransferOffer, getCurrentPlayer } from "@/lib/storage";
 import { Users, Trophy, Calendar as CalendarIcon, Shield, ArrowLeft, Heart, Instagram, Youtube, Swords, Target, Medal, Crosshair, Crown, Share2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
@@ -170,6 +173,44 @@ const PublicPlayerProfile = () => {
                                         <Share2 className="h-4 w-4 mr-2" />
                                         Share
                                     </Button>
+
+                                    {/* Transfer Offer Dialog */}
+                                    <Dialog>
+                                        <DialogTrigger asChild>
+                                            <Button size="sm" className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white border-0 shadow-lg">
+                                                <Crown className="h-4 w-4 mr-2" />
+                                                Make Offer
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Recruit {player.inGameName || player.username}</DialogTitle>
+                                                <DialogDescription>
+                                                    Send an official transfer offer to this player. If accepted, they will join your team.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <div className="space-y-4 py-4">
+                                                <div className="space-y-2">
+                                                    <Label>Message</Label>
+                                                    <Textarea id="offer-msg" placeholder="We need a sniper for Tier 1 scrims..." />
+                                                </div>
+                                            </div>
+                                            <DialogFooter>
+                                                <Button onClick={async () => {
+                                                    const msg = (document.getElementById('offer-msg') as HTMLTextAreaElement).value;
+                                                    try {
+                                                        const me = await getCurrentPlayer();
+                                                        if (!me?.teamId) throw new Error("You must be in a team to make offers.");
+                                                        await sendTransferOffer(me.teamId, player.id, msg);
+                                                        toast({ title: "Success", description: "Offer sent successfully" });
+                                                    } catch (e: any) {
+                                                        toast({ title: "Error", description: e.message, variant: "destructive" });
+                                                    }
+                                                }}>Send Offer</Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
+
                                 </div>
                             </div>
                         </div>

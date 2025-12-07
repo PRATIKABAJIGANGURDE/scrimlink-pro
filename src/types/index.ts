@@ -121,3 +121,62 @@ export interface TeamLineup {
   teamId: string;
   playerIds: string[];
 }
+
+export interface RecruitmentPost {
+  id: string;
+  type: 'LFT' | 'LFP';
+  authorId: string;
+  teamId?: string;
+  role?: string;
+  description?: string;
+  minKd?: number;
+  status: 'active' | 'closed';
+  createdAt: string;
+  // Joins
+  author?: {
+    username: string;
+    inGameName?: string;
+    profileUrl?: string;
+    role?: string;
+  };
+  team?: {
+    name: string;
+    logoUrl?: string;
+  };
+}
+
+export interface TeamApplication {
+  id: string;
+  postId: string;
+  playerId: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  message?: string;
+  createdAt: string;
+  // Joins
+  player?: {
+    username: string;
+    inGameName?: string;
+    profileUrl?: string;
+    role?: string;
+    kd?: number; // Calculated or stored
+  };
+  post?: RecruitmentPost;
+}
+
+export interface TransferOffer {
+  id: string;
+  teamId: string;
+  playerId: string;
+  status: 'pending' | 'accepted' | 'rejected' | 'pending_exit_approval';
+  message?: string;
+  createdAt: string;
+  // Joins
+  team?: {
+    name: string;
+    logoUrl?: string;
+  };
+  player?: {
+    username: string;
+    inGameName?: string;
+  };
+}

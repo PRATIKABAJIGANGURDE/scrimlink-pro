@@ -22,6 +22,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminLogin from "./pages/admin/AdminLogin";
 import Rankings from "./pages/Rankings";
 import MatchResults from "./pages/MatchResults";
+import Recruitment from "./pages/Recruitment";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/recruitment" element={<Recruitment />} />
           <Route path="/rankings" element={<Rankings />} />
           <Route path="/match-results" element={<MatchResults />} />
           <Route path="/team/register" element={<TeamRegister />} />
