@@ -30,7 +30,7 @@ import {
   approveTransferExit
 } from "@/lib/storage";
 import { Team, JoinRequest, Player, Scrim, Match, MatchTeamStats, ScrimTeam } from "@/types";
-import { Trophy, Users, Copy, Check, LogOut, UserPlus, UserCheck, UserX, Target, Calendar, Plus, BarChart, Crown } from "lucide-react";
+import { Trophy, Users, Copy, Check, LogOut, UserPlus, UserCheck, UserX, Target, Calendar, Plus, BarChart, Crown, Briefcase } from "lucide-react";
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
 import {
   AlertDialog,
@@ -307,6 +307,10 @@ const TeamDashboard = () => {
         <Button variant="outline" size="sm" onClick={() => navigate("/match-results")}>
           <BarChart className="h-4 w-4 mr-2" />
           Results
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => navigate("/recruitment")}>
+          <Briefcase className="h-4 w-4 mr-2" />
+          Recruitment
         </Button>
         <AlertDialog>
           <AlertDialogTrigger asChild>
