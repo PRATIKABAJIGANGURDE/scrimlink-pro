@@ -8,9 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { getCurrentUser, getCurrentPlayer, createRecruitmentPost, getRecruitmentPosts, deleteRecruitmentPost, applyToTeam } from "@/lib/storage";
-import { RecruitmentPost, Player } from "@/types";
-import { Users, User, ArrowRight, Trash2, MessageCircle, Plus } from "lucide-react";
+import { getCurrentUser, getCurrentPlayer, getCurrentTeam, createRecruitmentPost, getRecruitmentPosts, deleteRecruitmentPost, applyToTeam } from "@/lib/storage";
+import { RecruitmentPost, Player, Team } from "@/types";
+import { Users, User, ArrowRight, Trash2, MessageCircle, Plus, LogIn } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
 
@@ -19,15 +19,23 @@ const ROLES = ["Rusher", "Sniper", "IGL", "Supporter", "Flanker", "Any"];
 const Recruitment = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const [activeTab, setActiveTab] = useState("LFP"); // LFP = Teams finding Players
-    const [posts, setPosts] = useState<RecruitmentPost[]>([]);
     const [loading, setLoading] = useState(true);
+    const [posts, setPosts] = useState<RecruitmentPost[]>([]);
+
+    // Auth state
     const [user, setUser] = useState<any>(null);
     const [player, setPlayer] = useState<Player | null>(null);
+    const [team, setTeam] = useState<Team | null>(null);
+    const [userType, setUserType] = useState<'player' | 'team' | null>(null);
+
+    // activeTab is determined by userType: players see LFP (teams recruiting), teams see LFT (players looking)
+    const activeTab = userType === 'player' ? 'LFP' : userType === 'team' ? 'LFT' : 'LFP';
+
+    // Post type for creation: players can only post LFT, teams can only post LFP
+    const postType = userType === 'player' ? 'LFT' : 'LFP';
 
     // Create Post Form
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [postType, setPostType] = useState<"LFT" | "LFP">("LFT");
     const [role, setRole] = useState("");
     const [description, setDescription] = useState("");
     const [minKd, setMinKd] = useState("0");
@@ -37,36 +45,53 @@ const Recruitment = () => {
     }, []);
 
     useEffect(() => {
-        loadPosts();
-    }, [activeTab]);
+        if (userType) {
+            loadPosts();
+        }
+    }, [userType]);
 
     const checkUser = async () => {
-        const u = await getCurrentUser();
-        setUser(u);
-        if (u) {
-            const p = await getCurrentPlayer();
-            setPlayer(p);
-            // Default to LFT if user has no team, LFP if they do
-            if (p?.teamId) {
-                setActiveTab("LFP");
-                setPostType("LFP");
-            } else {
-                setActiveTab("LFT");
-                setPostType("LFT");
+        setLoading(true);
+        try {
+            const u = await getCurrentUser();
+            if (!u) {
+                // Not logged in - will show login prompt
+                setLoading(false);
+                return;
             }
+            setUser(u);
+
+            // Check if user is a player or team
+            const p = await getCurrentPlayer();
+            const t = await getCurrentTeam();
+
+            if (t) {
+                // User is logged in as a team
+                setTeam(t);
+                setUserType('team');
+            } else if (p) {
+                // User is logged in as a player
+                setPlayer(p);
+                setUserType('player');
+            } else {
+                // Logged in but no profile - edge case
+                setUserType(null);
+            }
+        } catch (error) {
+            console.error("Error checking user:", error);
+        } finally {
+            setLoading(false);
         }
     };
 
     const loadPosts = async () => {
-        setLoading(true);
         try {
+            // Players see LFP posts (teams recruiting), Teams see LFT posts (players looking)
             const data = await getRecruitmentPosts(activeTab === "LFP" ? "LFP" : "LFT");
             setPosts(data);
         } catch (error) {
             console.error(error);
             toast({ title: "Error", description: "Failed to load posts", variant: "destructive" });
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -82,7 +107,7 @@ const Recruitment = () => {
                 role,
                 description,
                 parseFloat(minKd),
-                postType === 'LFP' ? player?.teamId : undefined
+                postType === 'LFP' ? team?.id : undefined
             );
             toast({ title: "Success", description: "Post created successfully" });
             setIsDialogOpen(false);
@@ -114,6 +139,32 @@ const Recruitment = () => {
         }
     };
 
+    // Show login prompt if not authenticated
+    if (!loading && !user) {
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center p-4">
+                <Card className="max-w-md w-full">
+                    <CardHeader className="text-center">
+                        <CardTitle className="text-2xl">Login Required</CardTitle>
+                        <CardDescription>
+                            You need to be logged in to access the Recruitment Center.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <Button className="w-full gap-2" onClick={() => navigate("/player/login")}>
+                            <User className="h-4 w-4" />
+                            Login as Player
+                        </Button>
+                        <Button variant="outline" className="w-full gap-2" onClick={() => navigate("/team/login")}>
+                            <Users className="h-4 w-4" />
+                            Login as Team
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-background p-4 md:p-8">
             <div className="max-w-6xl mx-auto space-y-8">
@@ -131,31 +182,23 @@ const Recruitment = () => {
                             <DialogTrigger asChild>
                                 <Button className="gap-2">
                                     <Plus className="h-4 w-4" />
-                                    Create Post
+                                    {userType === 'player' ? 'Post Looking for Team' : 'Post Looking for Player'}
                                 </Button>
                             </DialogTrigger>
                             <DialogContent>
                                 <DialogHeader>
-                                    <DialogTitle>Create Recruitment Post</DialogTitle>
+                                    <DialogTitle>
+                                        {userType === 'player' ? 'Looking for Team (LFT)' : 'Looking for Player (LFP)'}
+                                    </DialogTitle>
                                     <DialogDescription>
-                                        Describe what you are looking for.
+                                        {userType === 'player'
+                                            ? 'Let teams know you are available to join.'
+                                            : 'Let players know your team is recruiting.'}
                                     </DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-4 py-4">
                                     <div className="space-y-2">
-                                        <Label>I am Looking For...</Label>
-                                        <Tabs value={postType} onValueChange={(v: any) => setPostType(v)} className="w-full">
-                                            <TabsList className="grid w-full grid-cols-2">
-                                                <TabsTrigger value="LFT" disabled={!!player?.teamId}>Team (LFT)</TabsTrigger>
-                                                <TabsTrigger value="LFP" disabled={!player?.teamId}>Player (LFP)</TabsTrigger>
-                                            </TabsList>
-                                        </Tabs>
-                                        {postType === 'LFT' && !!player?.teamId && <p className="text-xs text-destructive">Leave your current team to search for a new one.</p>}
-                                        {postType === 'LFP' && !player?.teamId && <p className="text-xs text-destructive">You must join/create a team to recruit players.</p>}
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label>Role</Label>
+                                        <Label>{userType === 'player' ? 'Your Role' : 'Role Needed'}</Label>
                                         <Select value={role} onValueChange={setRole}>
                                             <SelectTrigger><SelectValue placeholder="Select Role" /></SelectTrigger>
                                             <SelectContent>
@@ -164,15 +207,19 @@ const Recruitment = () => {
                                         </Select>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <Label>Minimum K/D (Optional)</Label>
-                                        <Input type="number" step="0.1" value={minKd} onChange={e => setMinKd(e.target.value)} />
-                                    </div>
+                                    {userType === 'team' && (
+                                        <div className="space-y-2">
+                                            <Label>Minimum K/D (Optional)</Label>
+                                            <Input type="number" step="0.1" value={minKd} onChange={e => setMinKd(e.target.value)} />
+                                        </div>
+                                    )}
 
                                     <div className="space-y-2">
                                         <Label>Description</Label>
                                         <Textarea
-                                            placeholder={postType === 'LFT' ? "e.g. 3KD, Active every evening, can IGL..." : "e.g. Looking for aggressive rusher for Tier 2 tournaments..."}
+                                            placeholder={userType === 'player'
+                                                ? "e.g. 3KD, Active every evening, can IGL..."
+                                                : "e.g. Looking for aggressive rusher for Tier 2 tournaments..."}
                                             value={description}
                                             onChange={e => setDescription(e.target.value)}
                                         />
@@ -186,26 +233,36 @@ const Recruitment = () => {
                     )}
                 </div>
 
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
-                        <TabsTrigger value="LFP" className="gap-2">
-                            <Users className="h-4 w-4" />
-                            Teams Recruiting
-                        </TabsTrigger>
-                        <TabsTrigger value="LFT" className="gap-2">
-                            <User className="h-4 w-4" />
-                            Players Looking
-                        </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="LFP" className="mt-6 space-y-4">
-                        {loading ? (
-                            <div className="text-center py-12">Loading...</div>
-                        ) : posts.length === 0 ? (
-                            <div className="text-center py-12 text-muted-foreground">No teams are recruiting right now. Be the first!</div>
+                {/* Show appropriate content based on user type */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                        {userType === 'player' ? (
+                            <>
+                                <Users className="h-5 w-5 text-primary" />
+                                <h2 className="text-xl font-semibold">Teams Recruiting Players</h2>
+                            </>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {posts.map(post => (
+                            <>
+                                <User className="h-5 w-5 text-primary" />
+                                <h2 className="text-xl font-semibold">Players Looking for Teams</h2>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Content: Players see LFP (teams recruiting), Teams see LFT (players looking) */}
+                    {loading ? (
+                        <div className="text-center py-12">Loading...</div>
+                    ) : posts.length === 0 ? (
+                        <div className="text-center py-12 text-muted-foreground">
+                            {userType === 'player'
+                                ? 'No teams are recruiting right now.'
+                                : 'No players are looking for teams right now.'}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {userType === 'player' ? (
+                                // Player sees LFP posts (teams recruiting)
+                                posts.map(post => (
                                     <Card key={post.id} className="bg-muted/30 border-primary/20 hover:border-primary/50 transition-colors">
                                         <CardHeader className="flex flex-row items-center gap-4 pb-2">
                                             <Avatar className="h-12 w-12 rounded-lg border">
@@ -235,7 +292,7 @@ const Recruitment = () => {
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
                                                 )}
-                                                {user && user.id !== post.authorId && postType === 'LFP' ? (
+                                                {user && user.id !== post.authorId && (
                                                     <Dialog>
                                                         <DialogTrigger asChild>
                                                             <Button size="sm" className="gap-2">
@@ -261,27 +318,14 @@ const Recruitment = () => {
                                                             </DialogFooter>
                                                         </DialogContent>
                                                     </Dialog>
-                                                ) : (
-                                                    <Button size="sm" variant="outline" className="gap-2" onClick={() => navigate(`/player/${post.author?.username}`)}>
-                                                        Contact <ArrowRight className="h-3 w-3" />
-                                                    </Button>
                                                 )}
                                             </div>
                                         </CardFooter>
                                     </Card>
-                                ))}
-                            </div>
-                        )}
-                    </TabsContent>
-
-                    <TabsContent value="LFT" className="mt-6 space-y-4">
-                        {loading ? (
-                            <div className="text-center py-12">Loading...</div>
-                        ) : posts.length === 0 ? (
-                            <div className="text-center py-12 text-muted-foreground">No players are looking right now.</div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {posts.map(post => (
+                                ))
+                            ) : (
+                                // Team sees LFT posts (players looking)
+                                posts.map(post => (
                                     <Card key={post.id} className="bg-muted/30 border-primary/20 hover:border-primary/50 transition-colors">
                                         <CardHeader className="flex flex-row items-center gap-4 pb-2">
                                             <Avatar className="h-12 w-12 border">
@@ -295,13 +339,11 @@ const Recruitment = () => {
                                         </CardHeader>
                                         <CardContent>
                                             <p className="text-sm text-foreground/80 line-clamp-3">{post.description}</p>
-                                            <div className="mt-4 flex gap-2">
-                                                {post.minKd > 0 && (
-                                                    <div className="bg-background/50 px-2 py-1 rounded text-xs font-medium border">
-                                                        {post.minKd} K/D
-                                                    </div>
-                                                )}
-                                            </div>
+                                            {post.minKd > 0 && (
+                                                <div className="mt-4 inline-block bg-background/50 px-2 py-1 rounded text-xs font-medium border">
+                                                    {post.minKd} K/D
+                                                </div>
+                                            )}
                                         </CardContent>
                                         <CardFooter className="flex justify-between border-t pt-4">
                                             <div className="text-xs text-muted-foreground">
@@ -319,11 +361,11 @@ const Recruitment = () => {
                                             </div>
                                         </CardFooter>
                                     </Card>
-                                ))}
-                            </div>
-                        )}
-                    </TabsContent>
-                </Tabs>
+                                ))
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
