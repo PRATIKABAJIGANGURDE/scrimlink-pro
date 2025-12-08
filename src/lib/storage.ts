@@ -1104,15 +1104,15 @@ export const getPublicPlayerProfileByUsername = async (username: string) => {
     currentTeam = team;
   }
 
-  // Get history from team_history table
+  // Get history from player_team_history table
   const { data: history } = await supabase
-    .from('team_history')
+    .from('player_team_history')
     .select(`
       *,
       team:teams (name, logo_url)
     `)
     .eq('player_id', player.id)
-    .order('left_at', { ascending: false });
+    .order('left_at', { ascending: false, nullsFirst: false });
 
   // Get like count
   const { count: likeCount } = await supabase
@@ -1627,28 +1627,39 @@ export const respondToOffer = async (offerId: string, response: 'accepted' | 're
 
 export const approveTransferExit = async (offerId: string) => {
   // 1. Get offer details
-  const { data: offer } = await supabase.from('transfer_offers').select('*').eq('id', offerId).single();
-  if (!offer) throw new Error("Offer not found");
+  const { data: offer, error: offerError } = await supabase.from('transfer_offers').select('*').eq('id', offerId).single();
+  if (offerError || !offer) throw new Error("Offer not found");
 
   // 2. Get player's current team info for history
-  const { data: player } = await supabase.from('players').select('team_id, created_at').eq('id', offer.player_id).single();
+  const { data: player, error: playerError } = await supabase.from('players').select('team_id, created_at').eq('id', offer.player_id).single();
+  if (playerError) throw playerError;
 
   if (player?.team_id) {
-    // 3. Save old team to history
-    // Use player's created_at as approximate join date if we don't have exact data
-    await supabase.from('team_history').insert({
+    // 3. Save old team to player_team_history (mark as left)
+    const { error: historyError } = await supabase.from('player_team_history').insert({
       player_id: offer.player_id,
       team_id: player.team_id,
-      joined_at: player.created_at, // Approximate - could be enhanced with actual join tracking
+      joined_at: player.created_at,
       left_at: new Date().toISOString()
     });
+    if (historyError) console.error("Failed to save history:", historyError);
   }
 
   // 4. Transfer Player to new team
-  await supabase.from('players').update({ team_id: offer.team_id }).eq('id', offer.player_id);
+  const { error: updateError } = await supabase
+    .from('players')
+    .update({ team_id: offer.team_id })
+    .eq('id', offer.player_id);
+
+  if (updateError) throw updateError;
 
   // 5. Mark offer as accepted
-  await supabase.from('transfer_offers').update({ status: 'accepted' }).eq('id', offerId);
+  const { error: offerUpdateError } = await supabase
+    .from('transfer_offers')
+    .update({ status: 'accepted' })
+    .eq('id', offerId);
+
+  if (offerUpdateError) throw offerUpdateError;
 };
 
 export const getTransferRequestsForCaptain = async (captainTeamId: string) => {
@@ -1733,13 +1744,13 @@ export const getAllTransferActivitiesForAdmin = async (limit = 50) => {
 
 export const getPlayerTeamHistory = async (playerId: string) => {
   const { data, error } = await supabase
-    .from('team_history')
+    .from('player_team_history')
     .select(`
       *,
       team:teams(name, logo_url)
     `)
     .eq('player_id', playerId)
-    .order('left_at', { ascending: false });
+    .order('left_at', { ascending: false, nullsFirst: false });
 
   if (error) throw error;
 
