@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { getPublicPlayerProfileByUsername, likePlayer, getCurrentUser, getPlayerDetailedStats, getPlayerStats, sendTransferOffer, getCurrentPlayer } from "@/lib/storage";
+import { getPublicPlayerProfileByUsername, likePlayer, getCurrentUser, getPlayerDetailedStats, getPlayerStats, sendTransferOffer, getCurrentPlayer, getCurrentTeam } from "@/lib/storage";
 import { Users, Trophy, Calendar as CalendarIcon, Shield, ArrowLeft, Heart, Instagram, Youtube, Swords, Target, Medal, Crosshair, Crown, Share2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
@@ -199,8 +199,16 @@ const PublicPlayerProfile = () => {
                                                 <Button onClick={async () => {
                                                     const msg = (document.getElementById('offer-msg') as HTMLTextAreaElement).value;
                                                     try {
+                                                        // Check if logged in as team first
+                                                        const team = await getCurrentTeam();
+                                                        if (team) {
+                                                            await sendTransferOffer(team.id, player.id, msg);
+                                                            toast({ title: "Success", description: "Offer sent successfully" });
+                                                            return;
+                                                        }
+                                                        // Fall back to player with team
                                                         const me = await getCurrentPlayer();
-                                                        if (!me?.teamId) throw new Error("You must be in a team to make offers.");
+                                                        if (!me?.teamId) throw new Error("You must be logged in as a team to make offers.");
                                                         await sendTransferOffer(me.teamId, player.id, msg);
                                                         toast({ title: "Success", description: "Offer sent successfully" });
                                                     } catch (e: any) {
