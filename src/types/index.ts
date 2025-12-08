@@ -180,3 +180,17 @@ export interface TransferOffer {
     inGameName?: string;
   };
 }
+
+export interface TeamHistory {
+  id: string;
+  playerId: string;
+  teamId: string;
+  joinedAt: string;
+  leftAt: string;
+  createdAt: string;
+  // Joins
+  team?: {
+    name: string;
+    logoUrl?: string;
+  };
+}

@@ -1104,15 +1104,15 @@ export const getPublicPlayerProfileByUsername = async (username: string) => {
     currentTeam = team;
   }
 
-  // Get history
+  // Get history from team_history table
   const { data: history } = await supabase
-    .from('player_team_history')
+    .from('team_history')
     .select(`
       *,
       team:teams (name, logo_url)
     `)
     .eq('player_id', player.id)
-    .order('joined_at', { ascending: false });
+    .order('left_at', { ascending: false });
 
   // Get like count
   const { count: likeCount } = await supabase
@@ -1630,10 +1630,24 @@ export const approveTransferExit = async (offerId: string) => {
   const { data: offer } = await supabase.from('transfer_offers').select('*').eq('id', offerId).single();
   if (!offer) throw new Error("Offer not found");
 
-  // 2. Transfer Player
+  // 2. Get player's current team info for history
+  const { data: player } = await supabase.from('players').select('team_id, created_at').eq('id', offer.player_id).single();
+
+  if (player?.team_id) {
+    // 3. Save old team to history
+    // Use player's created_at as approximate join date if we don't have exact data
+    await supabase.from('team_history').insert({
+      player_id: offer.player_id,
+      team_id: player.team_id,
+      joined_at: player.created_at, // Approximate - could be enhanced with actual join tracking
+      left_at: new Date().toISOString()
+    });
+  }
+
+  // 4. Transfer Player to new team
   await supabase.from('players').update({ team_id: offer.team_id }).eq('id', offer.player_id);
 
-  // 3. Mark offer as accepted
+  // 5. Mark offer as accepted
   await supabase.from('transfer_offers').update({ status: 'accepted' }).eq('id', offerId);
 };
 
@@ -1715,4 +1729,30 @@ export const getAllTransferActivitiesForAdmin = async (limit = 50) => {
   ].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, limit);
 
   return combined;
+};
+
+export const getPlayerTeamHistory = async (playerId: string) => {
+  const { data, error } = await supabase
+    .from('team_history')
+    .select(`
+      *,
+      team:teams(name, logo_url)
+    `)
+    .eq('player_id', playerId)
+    .order('left_at', { ascending: false });
+
+  if (error) throw error;
+
+  return data.map((h: any) => ({
+    id: h.id,
+    playerId: h.player_id,
+    teamId: h.team_id,
+    joinedAt: h.joined_at,
+    leftAt: h.left_at,
+    createdAt: h.created_at,
+    team: h.team ? {
+      name: h.team.name,
+      logoUrl: h.team.logo_url
+    } : undefined
+  }));
 };
