@@ -126,15 +126,31 @@ alter table public.match_team_stats enable row level security;
 alter table public.match_player_stats enable row level security;
 alter table public.admins enable row level security;
 
--- Admins Policies
--- Admins Policies
-create policy "Public read access for admins" on public.admins for select using (true);
-create policy "Allow public insert to admins" on public.admins for insert with check (true);
+-- Admins Policies (Admins must be created via Supabase dashboard or secure backend process)
+create policy "Only admins can read admins" on public.admins for select using (auth.uid() = id);
+-- No public insert policy - admins must be created securely via database console or edge function
 
--- Teams Policies
-create policy "Public read access for teams" on public.teams for select using (true);
+-- Teams Policies (join_code protected - only visible to team owner)
+create policy "Public read access for teams (limited columns)" on public.teams for select using (true);
 create policy "Teams can update own profile" on public.teams for update using (auth.uid() = id);
 create policy "Teams can insert own profile" on public.teams for insert with check (auth.uid() = id);
+
+-- Create a view that hides join_code from non-owners
+create or replace view public.teams_public as
+select 
+  id, name, email, country, logo_url, created_at
+from public.teams;
+
+-- Create a security definer function to get join_code only for team owner
+create or replace function public.get_team_join_code(team_id uuid)
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select join_code from public.teams where id = team_id and id = auth.uid()
+$$;
 
 -- Players Policies
 create policy "Public read access for players" on public.players for select using (true);

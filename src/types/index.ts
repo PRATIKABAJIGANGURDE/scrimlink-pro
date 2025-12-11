@@ -2,7 +2,6 @@ export interface Team {
   id: string;
   name: string;
   email: string;
-  password: string;
   logoUrl?: string;
   joinCode: string;
   country?: string;
@@ -14,7 +13,6 @@ export interface Player {
   id: string;
   username: string;
   email: string;
-  password: string;
   teamId?: string;
   status: 'pending' | 'approved' | 'rejected';
   role?: 'IGL' | 'Rusher' | 'Sniper' | 'Supporter' | 'Flanker';

@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { signUpPlayer } from "@/lib/storage";
+import { playerRegisterSchema } from "@/lib/validations";
 import { Users, ArrowLeft, Check } from "lucide-react";
 
 const PlayerRegister = () => {
@@ -37,20 +38,13 @@ const PlayerRegister = () => {
     e.preventDefault();
     setLoading(true);
 
-    if (formData.password !== formData.confirmPassword) {
+    // Validate input with zod
+    const validation = playerRegisterSchema.safeParse(formData);
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
       toast({
-        title: "Error",
-        description: "Passwords do not match",
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password must be at least 6 characters",
+        title: "Validation Error",
+        description: firstError.message,
         variant: "destructive",
       });
       setLoading(false);
@@ -59,12 +53,12 @@ const PlayerRegister = () => {
 
     try {
       await signUpPlayer(
-        formData.email,
-        formData.password,
-        formData.username,
+        validation.data.email,
+        validation.data.password,
+        validation.data.username,
         undefined, // No join code
-        formData.role,
-        formData.phoneNumber
+        validation.data.role,
+        validation.data.phoneNumber
       );
 
       setShowSuccess(true);
