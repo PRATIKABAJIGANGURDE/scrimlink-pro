@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { signIn, getCurrentPlayer } from "@/lib/storage";
+import { loginSchema } from "@/lib/validations";
 import { Users, ArrowLeft } from "lucide-react";
 
 const PlayerLogin = () => {
@@ -48,8 +49,21 @@ const PlayerLogin = () => {
     e.preventDefault();
     setLoading(true);
 
+    // Validate input with zod
+    const validation = loginSchema.safeParse(formData);
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      toast({
+        title: "Validation Error",
+        description: firstError.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
-      await signIn(formData.email, formData.password);
+      await signIn(validation.data.email, validation.data.password);
 
       // Verify role immediately after login
       const player = await getCurrentPlayer();

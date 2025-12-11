@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { signUpTeam, generateJoinCode } from "@/lib/storage";
+import { teamRegisterSchema } from "@/lib/validations";
 import { Trophy, ArrowLeft, Check } from "lucide-react";
 
 const TeamRegister = () => {
@@ -26,20 +27,13 @@ const TeamRegister = () => {
     e.preventDefault();
     setLoading(true);
 
-    if (formData.password !== formData.confirmPassword) {
+    // Validate input with zod
+    const validation = teamRegisterSchema.safeParse(formData);
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
       toast({
-        title: "Error",
-        description: "Passwords do not match",
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password must be at least 6 characters",
+        title: "Validation Error",
+        description: firstError.message,
         variant: "destructive",
       });
       setLoading(false);
@@ -49,11 +43,11 @@ const TeamRegister = () => {
     try {
       const code = generateJoinCode();
       await signUpTeam(
-        formData.email,
-        formData.password,
-        formData.teamName,
+        validation.data.email,
+        validation.data.password,
+        validation.data.teamName,
         code,
-        formData.country
+        validation.data.country
       );
 
       setShowSuccess(true);

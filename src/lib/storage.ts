@@ -23,7 +23,6 @@ export const saveTeam = async (team: Team): Promise<void> => {
     id: team.id,
     name: team.name,
     email: team.email,
-    password: team.password,
     join_code: team.joinCode,
     country: team.country,
     logo_url: team.logoUrl,
@@ -104,7 +103,6 @@ export const savePlayer = async (player: Player): Promise<void> => {
     id: player.id,
     username: player.username,
     email: player.email,
-    password: player.password,
     team_id: player.teamId,
     status: player.status,
     created_at: player.createdAt
