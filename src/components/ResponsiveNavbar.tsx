@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Menu } from "lucide-react";
+import { Menu, Lock, Briefcase } from "lucide-react";
 
 interface ResponsiveNavbarProps {
     title: string;
@@ -21,6 +21,8 @@ export const ResponsiveNavbar = ({ title, subtitle, icon, children, variant = "f
     } else if (variant === "dashboard") {
         headerClass = "fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-6xl z-50 rounded-xl border border-border/40 bg-background/70 backdrop-blur-md shadow-sm md:relative md:top-0 md:left-0 md:translate-x-0 md:w-full md:max-w-none md:rounded-none md:border-b md:border-x-0 md:bg-background/95 md:shadow-none";
     }
+
+
 
     return (
         <header className={headerClass}>

@@ -30,10 +30,11 @@ import {
     createReport,
     getReportsByScrimId,
     voteOnReport,
-    getAdmin
+    getAdmin,
+    updateScrim
 } from "@/lib/storage";
 import { Scrim, Match, Team, ScrimTeam, MatchTeamStats, Player, Report } from "@/types";
-import { Trophy, Calendar, Users, ArrowLeft, Plus, Flag, ThumbsUp, ThumbsDown, ShieldAlert } from "lucide-react";
+import { Trophy, Calendar, Users, ArrowLeft, Plus, Flag, ThumbsUp, ThumbsDown, ShieldAlert, Lock, Unlock, Copy, ExternalLink } from "lucide-react";
 
 const MAPS = [
     "Bermuda",
@@ -61,12 +62,19 @@ const ScrimManagement = () => {
     const [isPlayer, setIsPlayer] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
 
+    // Room Details
+    const [roomIdInput, setRoomIdInput] = useState("");
+    const [roomPasswordInput, setRoomPasswordInput] = useState("");
+    const [isRoomVisible, setIsRoomVisible] = useState(false); // Can user see it?
+    const [savingRoom, setSavingRoom] = useState(false);
+
     // Admin: Match Stats
     const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
     const [selectedMap, setSelectedMap] = useState<string>("");
     const [savingResults, setSavingResults] = useState(false);
     // Structure: { [teamId]: { id?: string, placement: number, players: { [playerId]: { id?: string, kills: number } } } }
-    const [matchStats, setMatchStats] = useState<Record<string, { id?: string; placement: number; players: Record<string, { id?: string; kills: number }> }>>({});
+    // Structure: { [teamId]: { id?: string, placement: number, totalPoints?: number, players: { [playerId]: { id?: string, kills: number } } } }
+    const [matchStats, setMatchStats] = useState<Record<string, { id?: string; placement: number; totalPoints?: number; players: Record<string, { id?: string; kills: number }> }>>({});
 
     // Team: Roster Selection
     const [rosterOpen, setRosterOpen] = useState(false);
@@ -140,9 +148,58 @@ const ScrimManagement = () => {
                 const myP = allScrimPlayers.filter((p: any) => p.teamId === activeTeamId).map((p: any) => p.playerId);
                 setMyRoster(myP);
             }
+
+            // Room Visibility Logic
+            if (scrimData) {
+                setRoomIdInput(scrimData.roomId || "");
+                setRoomPasswordInput(scrimData.roomPassword || "");
+
+                const startTime = new Date(scrimData.startTime || "").getTime();
+                const now = new Date().getTime();
+                const diffMinutes = (startTime - now) / (1000 * 60);
+
+                // Visible if admin OR if starts in less than 15 mins (and verified player in verified team)
+                // For simplicity: Admin always sees. Players see if < 15 mins.
+                if (diffMinutes <= 15) {
+                    setIsRoomVisible(true);
+                } else {
+                    setIsRoomVisible(false);
+                }
+            }
         } catch (error) {
             console.error("Failed to load scrim data:", error);
         }
+    };
+
+    const handleUpdateRoomDetails = async () => {
+        if (!id) return;
+        setSavingRoom(true);
+        try {
+            await updateScrim(id, { roomId: roomIdInput, roomPassword: roomPasswordInput });
+            toast({ title: "Updated", description: "Room details updated successfully" });
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message, variant: "destructive" });
+        } finally {
+            setSavingRoom(false);
+        }
+    };
+
+    const handleEndScrim = async () => {
+        if (!id) return;
+        if (!confirm("Are you sure you want to end this scrim? This will mark it as completed.")) return;
+
+        try {
+            await updateScrim(id, { status: 'completed' });
+            toast({ title: "Success", description: "Scrim ended successfully" });
+            loadData(id);
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message, variant: "destructive" });
+        }
+    };
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        toast({ title: "Copied", description: "Copied to clipboard" });
     };
 
     const handleAddTeam = async () => {
@@ -251,11 +308,26 @@ const ScrimManagement = () => {
     const handleSaveRoster = async () => {
         if (!id || !currentTeamId) return;
         try {
-            const currentRoster = await getScrimPlayers(id);
-            const currentIds = currentRoster.filter((p: any) => p.teamId === currentTeamId).map((p: any) => p.playerId);
+            const allScrimPlayers = await getScrimPlayers(id);
+            const currentIds = allScrimPlayers.filter((p: any) => p.teamId === currentTeamId).map((p: any) => p.playerId);
 
             const toAdd = myRoster.filter(pid => !currentIds.includes(pid));
-            for (const pid of toAdd) {
+
+            // Filter out players who are already in the scrim (in any team) to avoid duplicate key error
+            // We already know they aren't in OUR team (from the filter above), so if they are in allScrimPlayers, they are in ANOTHER team.
+            const conflictingPlayers = toAdd.filter(pid => allScrimPlayers.some((p: any) => p.playerId === pid));
+
+            if (conflictingPlayers.length > 0) {
+                toast({
+                    title: "Warning",
+                    description: `${conflictingPlayers.length} player(s) ignored because they are already in another team in this scrim.`,
+                    variant: "destructive"
+                });
+            }
+
+            const validToAdd = toAdd.filter(pid => !allScrimPlayers.some((p: any) => p.playerId === pid));
+
+            for (const pid of validToAdd) {
                 await saveScrimPlayer(id, currentTeamId, pid);
             }
 
@@ -267,9 +339,9 @@ const ScrimManagement = () => {
             toast({ title: "Success", description: "Roster updated" });
             setRosterOpen(false);
             loadData(id);
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            toast({ title: "Error", description: "Failed to update roster", variant: "destructive" });
+            toast({ title: "Error", description: error.message || "Failed to update roster", variant: "destructive" });
         }
     };
 
@@ -282,7 +354,7 @@ const ScrimManagement = () => {
             getMatchPlayerStatsByMatchId(match.id)
         ]);
 
-        const initialStats: Record<string, { id?: string; placement: number; players: Record<string, { id?: string; kills: number }> }> = {};
+        const initialStats: Record<string, { id?: string; placement: number; totalPoints?: number; players: Record<string, { id?: string; kills: number }> }> = {};
 
         scrimTeams.forEach(st => {
             const teamRoster = allPlayers.filter((p: any) => p.teamId === st.teamId);
@@ -301,6 +373,7 @@ const ScrimManagement = () => {
             initialStats[st.teamId] = {
                 id: existingTeamStat?.id,
                 placement: existingTeamStat ? existingTeamStat.placement : 0,
+                totalPoints: existingTeamStat ? existingTeamStat.totalPoints : 0,
                 players: playerStats
             };
         });
@@ -355,19 +428,22 @@ const ScrimManagement = () => {
                     <div>
                         <h1 className="text-2xl md:text-3xl font-bold">{scrim.name}</h1>
                         <div className="flex flex-wrap items-center gap-2 md:gap-4 text-muted-foreground mt-1">
-                            <span className="flex items-center gap-1 text-sm">
-                                <Calendar className="h-4 w-4" />
-                                {new Date(scrim.startTime || "").toLocaleString()}
-                            </span>
-                            <Badge variant={scrim.status === 'upcoming' ? 'secondary' : 'default'}>
-                                {scrim.status.toUpperCase()}
-                            </Badge>
+                            <span className="flex items-center"><Calendar className="w-4 h-4 mr-1" /> {new Date(scrim.startTime || "").toLocaleString()}</span>
+                            <span className="flex items-center"><Trophy className="w-4 h-4 mr-1" /> {scrim.matchCount} Matches</span>
+                            <Badge variant={scrim.status === 'upcoming' ? 'secondary' : 'default'}>{scrim.status.toUpperCase()}</Badge>
                         </div>
                     </div>
                 </div>
+                {isAdmin && scrim.status !== 'completed' && (
+                    <Button variant="destructive" onClick={handleEndScrim} className="mt-4 md:mt-0">
+                        End Scrim
+                    </Button>
+                )}
+            </div>
 
-                {/* Team Actions: Roster Selection */}
-                {!isAdmin && currentTeamId && (
+            {/* Team Actions: Roster Selection */}
+            {
+                !isAdmin && currentTeamId && (
                     <Dialog open={rosterOpen} onOpenChange={setRosterOpen}>
                         <DialogTrigger asChild>
                             <Button>Select Roster</Button>
@@ -397,8 +473,77 @@ const ScrimManagement = () => {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                )}
-            </div>
+                )
+            }
+
+
+            {/* Room Credentials Section */}
+            < Card className="border-primary/20 bg-primary/5" >
+                <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Lock className="h-5 w-5 text-primary" />
+                            <CardTitle className="text-lg">Match Room Details</CardTitle>
+                        </div>
+                        {scrim.status === 'completed' && <Badge variant="secondary">Completed</Badge>}
+                    </div>
+                    <CardDescription>
+                        {isAdmin
+                            ? "Share these details with players. They will only see them 15 minutes before start."
+                            : "Credentials will be revealed 15 minutes before the match starts."}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {(isAdmin || isRoomVisible) ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Room ID</Label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={roomIdInput}
+                                        onChange={(e) => setRoomIdInput(e.target.value)}
+                                        readOnly={!isAdmin}
+                                        placeholder={isAdmin ? "Enter Room ID" : "Not set"}
+                                        className="font-mono"
+                                    />
+                                    <Button variant="outline" size="icon" onClick={() => copyToClipboard(roomIdInput)} disabled={!roomIdInput}>
+                                        <Copy className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Password</Label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={roomPasswordInput}
+                                        onChange={(e) => setRoomPasswordInput(e.target.value)}
+                                        readOnly={!isAdmin}
+                                        placeholder={isAdmin ? "Enter Password" : "Not set"}
+                                        className="font-mono"
+                                        type="text"
+                                    />
+                                    <Button variant="outline" size="icon" onClick={() => copyToClipboard(roomPasswordInput)} disabled={!roomPasswordInput}>
+                                        <Copy className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                            {isAdmin && (
+                                <div className="md:col-span-2 flex justify-end">
+                                    <Button onClick={handleUpdateRoomDetails} disabled={savingRoom}>
+                                        {savingRoom ? "Saving..." : "Update Credentials"}
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-8 text-center gap-2 text-muted-foreground">
+                            <Lock className="h-8 w-8 mb-2 opacity-50" />
+                            <p>Credentials are currently locked.</p>
+                            <p className="text-sm">Check back 15 minutes before the scrim starts.</p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card >
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Left Column: Matches */}
@@ -408,7 +553,11 @@ const ScrimManagement = () => {
                         Matches
                     </h2>
                     {matches.map((match) => (
-                        <div key={match.id} className="flex flex-col gap-3 p-4 bg-muted rounded-lg border border-border">
+                        <div
+                            key={match.id}
+                            className="flex flex-col gap-3 p-4 bg-muted rounded-lg border border-border cursor-pointer hover:bg-muted/80 transition-colors"
+                            onClick={() => openMatchDialog(match)}
+                        >
                             <div className="flex items-center gap-4">
                                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                                     <span className="font-bold">#{match.matchNumber}</span>
@@ -418,18 +567,16 @@ const ScrimManagement = () => {
                                     <p className="text-sm text-muted-foreground">{match.mapName || "Map TBD"}</p>
                                 </div>
                             </div>
-                            {isAdmin && (
-                                <Dialog open={selectedMatch?.id === match.id} onOpenChange={(open) => !open && setSelectedMatch(null)}>
-                                    <DialogTrigger asChild>
-                                        <Button variant="outline" size="sm" className="w-full" onClick={() => openMatchDialog(match)}>
-                                            Enter Results
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto w-[95vw]">
-                                        <DialogHeader>
-                                            <DialogTitle>Match {match.matchNumber} Results</DialogTitle>
-                                            <DialogDescription>Enter placement and kills for each player</DialogDescription>
-                                        </DialogHeader>
+
+                            <Dialog open={selectedMatch?.id === match.id} onOpenChange={(open) => !open && setSelectedMatch(null)}>
+                                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto w-[95vw]" onClick={(e) => e.stopPropagation()}>
+                                    <DialogHeader>
+                                        <DialogTitle>Match {match.matchNumber} Details</DialogTitle>
+                                        <DialogDescription>{match.mapName || "Map TBD"} - {match.status.toUpperCase()}</DialogDescription>
+                                    </DialogHeader>
+
+                                    {isAdmin ? (
+                                        // Admin View: Editable
                                         <div className="space-y-6 py-4">
                                             <div className="space-y-2">
                                                 <Label>Map Selection</Label>
@@ -485,15 +632,46 @@ const ScrimManagement = () => {
                                                     </div>
                                                 </div>
                                             ))}
+                                            <DialogFooter>
+                                                <Button onClick={handleSaveResults} disabled={savingResults}>
+                                                    {savingResults ? "Saving..." : "Save Results"}
+                                                </Button>
+                                            </DialogFooter>
                                         </div>
-                                        <DialogFooter>
-                                            <Button onClick={handleSaveResults} disabled={savingResults}>
-                                                {savingResults ? "Saving..." : "Save Results"}
-                                            </Button>
-                                        </DialogFooter>
-                                    </DialogContent>
-                                </Dialog>
-                            )}
+                                    ) : (
+                                        // Player View: Read Only
+                                        <div className="space-y-6 py-4">
+                                            {match.status === 'completed' ? (
+                                                <div className="space-y-4">
+                                                    {scrimTeams
+                                                        .sort((a, b) => (matchStats[a.teamId]?.placement || 99) - (matchStats[b.teamId]?.placement || 99))
+                                                        .map((st) => {
+                                                            const stats = matchStats[st.teamId];
+                                                            if (!stats) return null;
+                                                            return (
+                                                                <div key={st.id} className="border p-4 rounded-lg flex justify-between items-center">
+                                                                    <div>
+                                                                        <span className="font-bold text-lg">#{stats.placement}</span>
+                                                                        <span className="ml-2 font-medium">{st.teamName}</span>
+                                                                    </div>
+                                                                    <div className="text-sm text-muted-foreground">
+                                                                        {Object.values(stats.players || {}).reduce((a, b) => a + b.kills, 0)} Kills
+                                                                        • {stats.totalPoints || 0} Pts
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    {Object.keys(matchStats).length === 0 && <p className="text-center text-muted-foreground">Results processing...</p>}
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-8 text-muted-foreground">
+                                                    Results will be available after the match is completed.
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </DialogContent>
+                            </Dialog>
                         </div>
                     ))}
                 </div>
@@ -640,7 +818,7 @@ const ScrimManagement = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 };
 

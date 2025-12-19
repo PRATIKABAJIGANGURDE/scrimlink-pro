@@ -62,7 +62,15 @@ const MatchResults = () => {
         const fetchResults = async () => {
             try {
                 const matchResults = await getMatchResults(selectedMatchId);
-                setResults(matchResults);
+                // Apply tie‑breaker sorting: points ↓, booyahs ↓, kills ↓, placement ↑
+                const sortedResults = [...matchResults].sort((a, b) => {
+                    if (b.total_points !== a.total_points) return b.total_points - a.total_points;
+                    if (b.is_booyah !== a.is_booyah) return (b.is_booyah ? 1 : 0) - (a.is_booyah ? 1 : 0);
+                    if (b.team_kills !== a.team_kills) return b.team_kills - a.team_kills;
+                    if (a.placement != null && b.placement != null) return a.placement - b.placement;
+                    return 0;
+                });
+                setResults(sortedResults);
             } catch (error) {
                 console.error("Failed to fetch results:", error);
             }

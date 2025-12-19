@@ -6,12 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { getCurrentPlayer, signOut, getTeamById, getPlayerStats, getTeamStats, joinTeam, getScrims, joinScrim, getScrimTeams, getMyApplications, getMyOffers, respondToOffer } from "@/lib/storage";
 import { Player, Team, Scrim, TeamApplication, TransferOffer } from "@/types";
-import { Users, LogOut, Target, Trophy, Clock, BarChart3, Crosshair, TrendingUp, User as UserIcon, BarChart, ArrowRight, Calendar, Briefcase, Handshake } from "lucide-react";
+import { Users, LogOut, Target, Trophy, Clock, BarChart3, Crosshair, TrendingUp, User as UserIcon, BarChart, ArrowRight, Calendar, Briefcase, Handshake, Lock } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Countdown } from "@/components/Countdown";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -46,6 +47,7 @@ const PlayerDashboard = () => {
   const [takenSlots, setTakenSlots] = useState<number[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string>("");
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
+
 
   useEffect(() => {
     const init = async () => {
@@ -515,10 +517,14 @@ const PlayerDashboard = () => {
                                   <Calendar className="h-3 w-3" />
                                   {new Date(scrim.startTime || "").toLocaleString()}
                                 </span>
+                                {scrim.status === 'upcoming' && scrim.startTime ? (
+                                  <Countdown targetDate={scrim.startTime} />
+                                ) : (
+                                  <Badge variant={scrim.status === 'upcoming' ? 'secondary' : 'default'} className="whitespace-nowrap">
+                                    {scrim.status.toUpperCase()}
+                                  </Badge>
+                                )}
                                 <span>{scrim.matchCount} Matches</span>
-                                <Badge variant={scrim.status === 'upcoming' ? 'secondary' : 'default'} className="whitespace-nowrap">
-                                  {scrim.status.toUpperCase()}
-                                </Badge>
                               </div>
                             </div>
                           </div>

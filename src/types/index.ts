@@ -74,6 +74,8 @@ export interface Scrim {
   matchCount: number;
   status: 'upcoming' | 'ongoing' | 'completed';
   startTime?: string;
+  roomId?: string;
+  roomPassword?: string;
   createdAt: string;
 }
 

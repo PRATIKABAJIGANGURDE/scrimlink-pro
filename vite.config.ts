@@ -18,7 +18,8 @@ export default defineConfig(({ mode }) => ({
         name: 'ScrimHub - Esports Management',
         short_name: 'ScrimHub',
         description: 'The ultimate platform for esports teams and players.',
-        theme_color: '#ffffff',
+        theme_color: '#3B82F6',
+        background_color: '#3B82F6',
         icons: [
           {
             src: 'pwa-192x192.png',

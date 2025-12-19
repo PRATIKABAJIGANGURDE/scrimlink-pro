@@ -258,6 +258,33 @@ export const updateJoinRequest = async (requestId: string, status: 'approved' | 
 };
 
 // Scrims
+export const updateScrim = async (id: string, updates: Partial<Scrim>) => {
+  const { data, error } = await supabase
+    .from('scrims')
+    .update({
+      name: updates.name,
+      status: updates.status,
+      start_time: updates.startTime,
+      room_id: updates.roomId,
+      room_password: updates.roomPassword
+    })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return {
+    ...data,
+    hostTeamId: data.host_team_id,
+    matchCount: data.match_count,
+    startTime: data.start_time,
+    roomId: data.room_id,
+    roomPassword: data.room_password,
+    createdAt: data.created_at
+  };
+};
+
 export const getScrims = async (): Promise<Scrim[]> => {
   const { data, error } = await supabase.from('scrims').select('*');
   if (error) throw error;

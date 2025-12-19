@@ -41,7 +41,9 @@ const Rankings = () => {
                             matches: 0,
                             kills: 0,
                             points: 0,
-                            booyahs: 0
+                            booyahs: 0,
+                            recentPlacement: null, // lower is better
+                            latestMatchCreatedAt: null
                         });
                     }
                     const team = teamMap.get(teamId);
@@ -49,9 +51,30 @@ const Rankings = () => {
                     team.kills += stat.team_kills || 0;
                     team.points += stat.total_points || 0;
                     if (stat.is_booyah) team.booyahs += 1;
+                    // Update recent placement based on most recent match
+                    if (stat.created_at) {
+                        const matchCreated = new Date(stat.created_at);
+                        if (!team.latestMatchCreatedAt || matchCreated > new Date(team.latestMatchCreatedAt)) {
+                            team.latestMatchCreatedAt = stat.created_at;
+                            team.recentPlacement = stat.placement ?? null;
+                        }
+                    }
                 });
 
-                const sortedTeams = Array.from(teamMap.values()).sort((a, b) => b.points - a.points);
+                const compareTeams = (a, b) => {
+                    // Points descending
+                    if (b.points !== a.points) return b.points - a.points;
+                    // Booyahs descending
+                    if (b.booyahs !== a.booyahs) return b.booyahs - a.booyahs;
+                    // Kills descending
+                    if (b.kills !== a.kills) return b.kills - a.kills;
+                    // Recent placement ascending (lower is better)
+                    if (a.recentPlacement != null && b.recentPlacement != null) {
+                        if (a.recentPlacement !== b.recentPlacement) return a.recentPlacement - b.recentPlacement;
+                    }
+                    return 0;
+                };
+                const sortedTeams = Array.from(teamMap.values()).sort(compareTeams);
                 setTeamRankings(sortedTeams);
 
                 // Process Player Rankings

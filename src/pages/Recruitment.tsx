@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { getCurrentUser, getCurrentPlayer, getCurrentTeam, createRecruitmentPost, getRecruitmentPosts, deleteRecruitmentPost, applyToTeam } from "@/lib/storage";
 import { RecruitmentPost, Player, Team } from "@/types";
-import { Users, User, ArrowRight, Trash2, MessageCircle, Plus, LogIn } from "lucide-react";
+
+import { Users, User, ArrowRight, Trash2, MessageCircle, Plus, LogIn, ArrowLeft } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
 
@@ -39,6 +40,8 @@ const Recruitment = () => {
     const [role, setRole] = useState("");
     const [description, setDescription] = useState("");
     const [minKd, setMinKd] = useState("0");
+
+
 
     useEffect(() => {
         checkUser();
@@ -96,6 +99,7 @@ const Recruitment = () => {
     };
 
     const handleCreatePost = async () => {
+
         if (!role || !description) {
             toast({ title: "Error", description: "Please fill in all fields", variant: "destructive" });
             return;
@@ -131,6 +135,7 @@ const Recruitment = () => {
     };
 
     const handleApply = async (postId: string, message: string) => {
+
         try {
             await applyToTeam(postId, message);
             toast({ title: "Success", description: "Application sent successfully" });
@@ -167,7 +172,13 @@ const Recruitment = () => {
 
     return (
         <div className="min-h-screen bg-background p-4 md:p-8">
-            <div className="max-w-6xl mx-auto space-y-8">
+            <div className="max-w-6xl mx-auto space-y-6">
+                <div className="flex items-center">
+                    <Button variant="ghost" className="gap-2 -ml-4 md:ml-0 text-muted-foreground hover:text-foreground" onClick={() => navigate(-1)}>
+                        <ArrowLeft className="h-4 w-4" />
+                        Back
+                    </Button>
+                </div>
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
