@@ -175,7 +175,8 @@ const ScrimManagement = () => {
         if (!id) return;
         setSavingRoom(true);
         try {
-            await updateScrim(id, { roomId: roomIdInput, roomPassword: roomPasswordInput });
+            const updatedScrim = await updateScrim(id, { roomId: roomIdInput, roomPassword: roomPasswordInput });
+            setScrim(updatedScrim);
             toast({ title: "Updated", description: "Room details updated successfully" });
         } catch (error: any) {
             toast({ title: "Error", description: error.message, variant: "destructive" });

@@ -21,12 +21,25 @@ const PublicPlayerProfile = () => {
     const [liking, setLiking] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [recentMatches, setRecentMatches] = useState<any[]>([]);
+    const [canMakeOffer, setCanMakeOffer] = useState(false);
 
     useEffect(() => {
         const init = async () => {
             try {
                 const user = await getCurrentUser();
                 setCurrentUser(user);
+
+
+                if (user) {
+                    const team = await getCurrentTeam();
+                    if (team) {
+                        setCanMakeOffer(true);
+                    } else {
+                        const me = await getCurrentPlayer();
+                        if (me?.teamId) setCanMakeOffer(true);
+                    }
+                }
+
                 if (username) {
                     await loadProfile(username);
                 }
@@ -127,7 +140,8 @@ const PublicPlayerProfile = () => {
 
                             <div className="flex-1 text-center md:text-left space-y-4">
                                 <div>
-                                    <h1 className="text-3xl font-bold mb-2">{player.inGameName || player.username}</h1>
+                                    <h1 className="text-3xl font-bold mb-0">{player.inGameName || player.username}</h1>
+                                    <div className="text-muted-foreground mb-2">@{player.username}</div>
                                     <div className="flex flex-wrap justify-center md:justify-start items-center gap-4 text-muted-foreground">
                                         <span className="flex items-center gap-2">
                                             <CalendarIcon className="h-4 w-4" />
@@ -175,49 +189,51 @@ const PublicPlayerProfile = () => {
                                     </Button>
 
                                     {/* Transfer Offer Dialog */}
-                                    <Dialog>
-                                        <DialogTrigger asChild>
-                                            <Button size="sm" className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white border-0 shadow-lg">
-                                                <Crown className="h-4 w-4 mr-2" />
-                                                Make Offer
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent>
-                                            <DialogHeader>
-                                                <DialogTitle>Recruit {player.inGameName || player.username}</DialogTitle>
-                                                <DialogDescription>
-                                                    Send an official transfer offer to this player. If accepted, they will join your team.
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                            <div className="space-y-4 py-4">
-                                                <div className="space-y-2">
-                                                    <Label>Message</Label>
-                                                    <Textarea id="offer-msg" placeholder="We need a sniper for Tier 1 scrims..." />
+                                    {canMakeOffer && (
+                                        <Dialog>
+                                            <DialogTrigger asChild>
+                                                <Button size="sm" className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white border-0 shadow-lg">
+                                                    <Crown className="h-4 w-4 mr-2" />
+                                                    Make Offer
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent>
+                                                <DialogHeader>
+                                                    <DialogTitle>Recruit {player.inGameName || player.username}</DialogTitle>
+                                                    <DialogDescription>
+                                                        Send an official transfer offer to this player. If accepted, they will join your team.
+                                                    </DialogDescription>
+                                                </DialogHeader>
+                                                <div className="space-y-4 py-4">
+                                                    <div className="space-y-2">
+                                                        <Label>Message</Label>
+                                                        <Textarea id="offer-msg" placeholder="We need a sniper for Tier 1 scrims..." />
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <DialogFooter>
-                                                <Button onClick={async () => {
-                                                    const msg = (document.getElementById('offer-msg') as HTMLTextAreaElement).value;
-                                                    try {
-                                                        // Check if logged in as team first
-                                                        const team = await getCurrentTeam();
-                                                        if (team) {
-                                                            await sendTransferOffer(team.id, player.id, msg);
+                                                <DialogFooter>
+                                                    <Button onClick={async () => {
+                                                        const msg = (document.getElementById('offer-msg') as HTMLTextAreaElement).value;
+                                                        try {
+                                                            // Check if logged in as team first
+                                                            const team = await getCurrentTeam();
+                                                            if (team) {
+                                                                await sendTransferOffer(team.id, player.id, msg);
+                                                                toast({ title: "Success", description: "Offer sent successfully" });
+                                                                return;
+                                                            }
+                                                            // Fall back to player with team
+                                                            const me = await getCurrentPlayer();
+                                                            if (!me?.teamId) throw new Error("You must be logged in as a team to make offers.");
+                                                            await sendTransferOffer(me.teamId, player.id, msg);
                                                             toast({ title: "Success", description: "Offer sent successfully" });
-                                                            return;
+                                                        } catch (e: any) {
+                                                            toast({ title: "Error", description: e.message, variant: "destructive" });
                                                         }
-                                                        // Fall back to player with team
-                                                        const me = await getCurrentPlayer();
-                                                        if (!me?.teamId) throw new Error("You must be logged in as a team to make offers.");
-                                                        await sendTransferOffer(me.teamId, player.id, msg);
-                                                        toast({ title: "Success", description: "Offer sent successfully" });
-                                                    } catch (e: any) {
-                                                        toast({ title: "Error", description: e.message, variant: "destructive" });
-                                                    }
-                                                }}>Send Offer</Button>
-                                            </DialogFooter>
-                                        </DialogContent>
-                                    </Dialog>
+                                                    }}>Send Offer</Button>
+                                                </DialogFooter>
+                                            </DialogContent>
+                                        </Dialog>
+                                    )}
 
                                 </div>
                             </div>

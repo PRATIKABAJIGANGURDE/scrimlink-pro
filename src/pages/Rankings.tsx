@@ -86,6 +86,7 @@ const Rankings = () => {
                         playerMap.set(playerId, {
                             id: playerId,
                             username: stat.player.username,
+                            inGameName: stat.player.in_game_name,
                             teamName: stat.team?.name || 'Free Agent',
                             matches: 0,
                             kills: 0
@@ -277,8 +278,8 @@ const Rankings = () => {
                                                                 </AvatarFallback>
                                                             </Avatar>
                                                             <div>
-                                                                <div className="font-bold text-lg break-all">{player.username}</div>
-                                                                <div className="text-xs text-muted-foreground">{player.teamName}</div>
+                                                                <div className="font-bold text-lg break-all">{player.inGameName || player.username}</div>
+                                                                <div className="text-xs text-muted-foreground">@{player.username} • {player.teamName}</div>
                                                             </div>
                                                         </Link>
                                                     </div>
@@ -336,10 +337,13 @@ const Rankings = () => {
                                                                 <Avatar className="h-8 w-8 border-2 border-primary/20">
                                                                     <AvatarImage src={player.profileUrl} alt={player.username} />
                                                                     <AvatarFallback className="text-xs font-bold bg-primary/10">
-                                                                        {player.username.substring(0, 2).toUpperCase()}
+                                                                        {(player.inGameName || player.username).substring(0, 2).toUpperCase()}
                                                                     </AvatarFallback>
                                                                 </Avatar>
-                                                                <span className="font-semibold">{player.username}</span>
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-semibold">{player.inGameName || player.username}</span>
+                                                                    <span className="text-xs text-muted-foreground">@{player.username}</span>
+                                                                </div>
                                                             </Link>
                                                         </TableCell>
                                                         <TableCell className="text-muted-foreground">{player.teamName}</TableCell>

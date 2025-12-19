@@ -293,6 +293,8 @@ export const getScrims = async (): Promise<Scrim[]> => {
     hostTeamId: s.host_team_id,
     matchCount: s.match_count,
     startTime: s.start_time,
+    roomId: s.room_id,
+    roomPassword: s.room_password,
     createdAt: s.created_at
   }));
 };
@@ -325,6 +327,8 @@ export const getScrimById = async (id: string): Promise<Scrim | null> => {
     hostTeamId: data.host_team_id,
     matchCount: data.match_count,
     startTime: data.start_time,
+    roomId: data.room_id,
+    roomPassword: data.room_password,
     createdAt: data.created_at
   };
 };
@@ -690,6 +694,7 @@ export const getAllPlayerStats = async () => {
       player:players (
         id,
         username,
+        in_game_name,
         team_id
       ),
       team:teams (
@@ -1092,7 +1097,8 @@ export const getPublicPlayerProfile = async (playerId: string) => {
       teamId: player.team_id,
       createdAt: player.created_at,
       instagramUrl: player.instagram_url,
-      youtubeUrl: player.youtube_url
+      youtubeUrl: player.youtube_url,
+      inGameName: player.in_game_name
     },
     currentTeam,
     history: history?.map((h: any) => ({
@@ -1151,7 +1157,8 @@ export const getPublicPlayerProfileByUsername = async (username: string) => {
       teamId: player.team_id,
       createdAt: player.created_at,
       instagramUrl: player.instagram_url,
-      youtubeUrl: player.youtube_url
+      youtubeUrl: player.youtube_url,
+      inGameName: player.in_game_name
     },
     currentTeam,
     history: history?.map((h: any) => ({
