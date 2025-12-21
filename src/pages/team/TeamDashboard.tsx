@@ -30,7 +30,7 @@ import {
   approveTransferExit
 } from "@/lib/storage";
 import { Team, JoinRequest, Player, Scrim, Match, MatchTeamStats, ScrimTeam } from "@/types";
-import { Trophy, Users, Copy, Check, LogOut, UserPlus, UserCheck, UserX, Target, Calendar, Plus, BarChart, Crown, Briefcase } from "lucide-react";
+import { Trophy, Users, Copy, Check, LogOut, UserPlus, UserCheck, UserX, Target, Calendar, Plus, BarChart, Crown, Briefcase, Lock } from "lucide-react";
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
 import {
   AlertDialog,
@@ -43,6 +43,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Countdown } from "@/components/Countdown";
 
 const TeamDashboard = () => {
   const navigate = useNavigate();
@@ -66,6 +67,7 @@ const TeamDashboard = () => {
   const [selectedSlot, setSelectedSlot] = useState<string>("");
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
   const [myScrimIds, setMyScrimIds] = useState<string[]>([]);
+
 
   // Transfer System
   const [teamApps, setTeamApps] = useState<any[]>([]);
@@ -636,10 +638,14 @@ const TeamDashboard = () => {
                                   <Calendar className="h-3 w-3" />
                                   {new Date(scrim.startTime || "").toLocaleString()}
                                 </span>
+                                {scrim.status === 'upcoming' && scrim.startTime ? (
+                                  <Countdown targetDate={scrim.startTime} />
+                                ) : (
+                                  <Badge variant={scrim.status === 'upcoming' ? 'secondary' : 'default'} className="whitespace-nowrap">
+                                    {scrim.status.toUpperCase()}
+                                  </Badge>
+                                )}
                                 <span>{scrim.matchCount} Matches</span>
-                                <Badge variant={scrim.status === 'upcoming' ? 'secondary' : 'default'} className="whitespace-nowrap">
-                                  {scrim.status.toUpperCase()}
-                                </Badge>
                               </div>
                             </div>
                           </div>
