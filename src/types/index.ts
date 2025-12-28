@@ -19,6 +19,7 @@ export interface Player {
   profileUrl?: string;
   instagramUrl?: string;
   youtubeUrl?: string;
+  discordUsername?: string;
   isVerified?: boolean;
   gameUid?: string;
   inGameName?: string;
@@ -192,5 +193,19 @@ export interface TeamHistory {
   team?: {
     name: string;
     logoUrl?: string;
+  };
+}
+
+export interface Feedback {
+  id: string;
+  playerId: string;
+  content: string;
+  tag: string;
+  createdAt: string;
+  // Joins
+  player?: {
+    username: string;
+    inGameName?: string;
+    profileUrl?: string;
   };
 }

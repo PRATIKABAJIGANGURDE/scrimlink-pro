@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { getPublicPlayerProfileByUsername, likePlayer, getCurrentUser, getPlayerDetailedStats, getPlayerStats, sendTransferOffer, getCurrentPlayer, getCurrentTeam } from "@/lib/storage";
-import { Users, Trophy, Calendar as CalendarIcon, Shield, ArrowLeft, Heart, Instagram, Youtube, Swords, Target, Medal, Crosshair, Crown, Share2 } from "lucide-react";
+import { Users, Trophy, Calendar as CalendarIcon, Shield, ArrowLeft, Heart, Instagram, Youtube, Swords, Target, Medal, Crosshair, Crown, Share2, MessageSquare } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
 
@@ -170,6 +170,18 @@ const PublicPlayerProfile = () => {
                                             <a href={player.youtubeUrl} target="_blank" rel="noopener noreferrer">
                                                 <Youtube className="h-4 w-4 mr-2 text-red-500" />
                                                 YouTube
+                                            </a>
+                                        </Button>
+                                    )}
+                                    {player.discordUsername && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            asChild
+                                        >
+                                            <a href={`https://discord.com/users/${player.discordUsername}`} target="_blank" rel="noopener noreferrer">
+                                                <MessageSquare className="h-4 w-4 mr-2 text-indigo-500" />
+                                                Discord
                                             </a>
                                         </Button>
                                     )}

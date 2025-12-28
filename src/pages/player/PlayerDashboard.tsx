@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { getCurrentPlayer, signOut, getTeamById, getPlayerStats, getTeamStats, joinTeam, getScrims, joinScrim, getScrimTeams, getMyApplications, getMyOffers, respondToOffer } from "@/lib/storage";
 import { Player, Team, Scrim, TeamApplication, TransferOffer } from "@/types";
-import { Users, LogOut, Target, Trophy, Clock, BarChart3, Crosshair, TrendingUp, User as UserIcon, BarChart, ArrowRight, Calendar, Briefcase, Handshake, Lock } from "lucide-react";
+import { Users, LogOut, Target, Trophy, Clock, BarChart3, Crosshair, TrendingUp, User as UserIcon, BarChart, ArrowRight, Calendar, Briefcase, Handshake, Lock, MessageSquare } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -209,6 +209,10 @@ const PlayerDashboard = () => {
         <Button variant="outline" size="sm" onClick={() => navigate("/match-results")}>
           <BarChart className="h-4 w-4 mr-2" />
           Results
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => navigate("/feedback")}>
+          <MessageSquare className="h-4 w-4 mr-2" />
+          Feedback
         </Button>
         <AlertDialog>
           <AlertDialogTrigger asChild>

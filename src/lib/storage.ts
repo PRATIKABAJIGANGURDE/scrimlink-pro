@@ -1,4 +1,4 @@
-import { Team, Player, JoinRequest, Scrim, Match, MatchTeamStats, MatchPlayerStats, ScrimTeam } from '@/types';
+import { Team, Player, JoinRequest, Scrim, Match, MatchTeamStats, MatchPlayerStats, ScrimTeam, Feedback } from '@/types';
 import { supabase } from './supabase';
 
 // Helper to map Supabase response to our types (handling snake_case to camelCase if needed)
@@ -94,6 +94,7 @@ export const getPlayers = async (): Promise<Player[]> => {
     teamId: p.team_id,
     gameUid: p.game_uid,
     inGameName: p.in_game_name,
+    discordUsername: p.discord_username,
     createdAt: p.created_at
   }));
 };
@@ -125,6 +126,7 @@ export const getPlayerByEmail = async (email: string): Promise<Player | null> =>
     teamId: data.team_id,
     gameUid: data.game_uid,
     inGameName: data.in_game_name,
+    discordUsername: data.discord_username,
     createdAt: data.created_at
   };
 };
@@ -144,6 +146,7 @@ export const getPlayerById = async (id: string): Promise<Player | null> => {
     teamId: data.team_id,
     gameUid: data.game_uid,
     inGameName: data.in_game_name,
+    discordUsername: data.discord_username,
     createdAt: data.created_at
   };
 };
@@ -161,6 +164,7 @@ export const getPlayersByTeamId = async (teamId: string): Promise<Player[]> => {
     teamId: p.team_id,
     gameUid: p.game_uid,
     inGameName: p.in_game_name,
+    discordUsername: p.discord_username,
     createdAt: p.created_at
   }));
 };
@@ -1158,6 +1162,7 @@ export const getPublicPlayerProfileByUsername = async (username: string) => {
       createdAt: player.created_at,
       instagramUrl: player.instagram_url,
       youtubeUrl: player.youtube_url,
+      discordUsername: player.discord_username,
       inGameName: player.in_game_name
     },
     currentTeam,
@@ -1170,12 +1175,13 @@ export const getPublicPlayerProfileByUsername = async (username: string) => {
   };
 };
 
-export const updatePlayerSocials = async (playerId: string, instagramUrl?: string, youtubeUrl?: string) => {
+export const updatePlayerSocials = async (playerId: string, instagramUrl?: string, youtubeUrl?: string, discordUsername?: string) => {
   const { error } = await supabase
     .from('players')
     .update({
       instagram_url: instagramUrl,
-      youtube_url: youtubeUrl
+      youtube_url: youtubeUrl,
+      discord_username: discordUsername
     })
     .eq('id', playerId);
 
@@ -1787,4 +1793,46 @@ export const getPlayerTeamHistory = async (playerId: string) => {
       logoUrl: h.team.logo_url
     } : undefined
   }));
+};
+
+// Feedback
+export const getFeedback = async (): Promise<Feedback[]> => {
+  const { data, error } = await supabase
+    .from('feedback')
+    .select(`
+      *,
+      player:players (
+        username,
+        in_game_name,
+        profile_url
+      )
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return data.map((f: any) => ({
+    id: f.id,
+    playerId: f.player_id,
+    content: f.content,
+    tag: f.tag,
+    createdAt: f.created_at,
+    player: {
+      username: f.player.username,
+      inGameName: f.player.in_game_name,
+      profileUrl: f.player.profile_url
+    }
+  }));
+};
+
+export const submitFeedback = async (playerId: string, content: string, tag: string): Promise<void> => {
+  const { error } = await supabase
+    .from('feedback')
+    .insert({
+      player_id: playerId,
+      content,
+      tag
+    });
+
+  if (error) throw error;
 };

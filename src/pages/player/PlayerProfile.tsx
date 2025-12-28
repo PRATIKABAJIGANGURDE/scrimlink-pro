@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { getCurrentPlayer, signOut, getTeamById, leaveTeam, updatePlayerSocials, updatePlayer } from "@/lib/storage";
 import { Player, Team } from "@/types";
-import { Users, LogOut, Trophy, UserMinus, Mail, Calendar as CalendarIcon, Shield, ArrowLeft, Crown, BarChart, Instagram, Youtube, Save, Target, User } from "lucide-react";
+import { Users, LogOut, Trophy, UserMinus, Mail, Calendar as CalendarIcon, Shield, ArrowLeft, Crown, BarChart, Instagram, Youtube, Save, Target, User, MessageSquare } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
@@ -18,7 +18,7 @@ const PlayerProfile = () => {
     const { toast } = useToast();
     const [player, setPlayer] = useState<Player | null>(null);
     const [team, setTeam] = useState<Team | null>(null);
-    const [socials, setSocials] = useState({ instagram: "", youtube: "" });
+    const [socials, setSocials] = useState({ instagram: "", youtube: "", discord: "" });
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
@@ -32,7 +32,8 @@ const PlayerProfile = () => {
                 setPlayer(currentPlayer);
                 setSocials({
                     instagram: currentPlayer.instagramUrl || "",
-                    youtube: currentPlayer.youtubeUrl || ""
+                    youtube: currentPlayer.youtubeUrl || "",
+                    discord: currentPlayer.discordUsername || ""
                 });
 
                 if (currentPlayer.teamId) {
@@ -82,7 +83,7 @@ const PlayerProfile = () => {
         if (!player) return;
         setIsSaving(true);
         try {
-            await updatePlayerSocials(player.id, socials.instagram, socials.youtube);
+            await updatePlayerSocials(player.id, socials.instagram, socials.youtube, socials.discord);
             toast({
                 title: "Profile Updated",
                 description: "Social links saved successfully"
@@ -204,6 +205,22 @@ const PlayerProfile = () => {
                                                 onChange={(e) => setSocials({ ...socials, youtube: e.target.value })}
                                             />
                                         </div>
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="discord">Discord User ID</Label>
+                                        <div className="relative">
+                                            <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                id="discord"
+                                                placeholder="Enter Discord User ID (e.g. 123456789...)"
+                                                className="pl-9"
+                                                value={socials.discord}
+                                                onChange={(e) => setSocials({ ...socials, discord: e.target.value })}
+                                            />
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Required for the profile button to work. Enable Developer Mode in Discord to copy your ID.
+                                        </p>
                                     </div>
                                     <Button onClick={handleSaveSocials} disabled={isSaving} className="w-fit">
                                         <Save className="h-4 w-4 mr-2" />
