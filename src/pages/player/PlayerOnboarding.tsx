@@ -18,6 +18,7 @@ const PlayerOnboarding = () => {
         inGameName: "",
         phoneNumber: ""
     });
+    const [hasExistingPhone, setHasExistingPhone] = useState(false);
 
     useEffect(() => {
         const checkStatus = async () => {
@@ -36,6 +37,7 @@ const PlayerOnboarding = () => {
 
                 if (player.phoneNumber) {
                     setFormData(prev => ({ ...prev, phoneNumber: player.phoneNumber! }));
+                    setHasExistingPhone(true);
                 }
 
                 setLoading(false);
@@ -136,20 +138,22 @@ const PlayerOnboarding = () => {
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="phoneNumber">Phone Number</Label>
-                            <div className="relative">
-                                <Input
-                                    id="phoneNumber"
-                                    type="tel"
-                                    placeholder="+91 1234567890"
-                                    value={formData.phoneNumber}
-                                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                                    required
-                                />
+                        {!hasExistingPhone && (
+                            <div className="space-y-2">
+                                <Label htmlFor="phoneNumber">Phone Number</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="phoneNumber"
+                                        type="tel"
+                                        placeholder="+91 1234567890"
+                                        value={formData.phoneNumber}
+                                        onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <p className="text-xs text-muted-foreground">Required for tournament verification.</p>
                             </div>
-                            <p className="text-xs text-muted-foreground">Required for tournament verification.</p>
-                        </div>
+                        )}
 
                         <Button type="submit" className="w-full" disabled={saving}>
                             {saving ? "Saving..." : "Start Journey"}

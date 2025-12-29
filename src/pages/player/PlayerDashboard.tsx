@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getCurrentPlayer, signOut, getTeamById, getPlayerStats, getTeamStats, joinTeam, getScrims, joinScrim, getScrimTeams, getMyApplications, getMyOffers, respondToOffer } from "@/lib/storage";
+import { getCurrentPlayer, getCurrentTeam, signOut, getTeamById, getPlayerStats, getTeamStats, joinTeam, getScrims, joinScrim, getScrimTeams, getMyApplications, getMyOffers, respondToOffer } from "@/lib/storage";
 import { Player, Team, Scrim, TeamApplication, TransferOffer } from "@/types";
 import { Users, LogOut, Target, Trophy, Clock, BarChart3, Crosshair, TrendingUp, User as UserIcon, BarChart, ArrowRight, Calendar, Briefcase, Handshake, Lock, MessageSquare } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -37,6 +37,7 @@ const PlayerDashboard = () => {
   const [joinCode, setJoinCode] = useState("");
   const [isJoining, setIsJoining] = useState(false);
   const [scrims, setScrims] = useState<Scrim[]>([]);
+  const [hasTeamProfile, setHasTeamProfile] = useState(false);
 
   // Transfer System
   const [applications, setApplications] = useState<TeamApplication[]>([]);
@@ -58,6 +59,10 @@ const PlayerDashboard = () => {
           return;
         }
         setPlayer(currentPlayer);
+
+        // Check for team profile (owned team) AND that we are still connected to it
+        const teamProfile = await getCurrentTeam();
+        if (teamProfile && currentPlayer.teamId === teamProfile.id) setHasTeamProfile(true);
 
         if (!currentPlayer.gameUid || !currentPlayer.inGameName) {
           navigate("/player/onboarding");
@@ -193,6 +198,17 @@ const PlayerDashboard = () => {
         variant="dashboard"
         icon={<Users className="h-8 w-8 text-primary" />}
       >
+        {hasTeamProfile ? (
+          <Button variant="secondary" size="sm" onClick={() => navigate("/team/dashboard")}>
+            <Trophy className="h-4 w-4 mr-2" />
+            Switch to Team
+          </Button>
+        ) : (
+          <Button variant="secondary" size="sm" onClick={() => navigate("/team/register")}>
+            <Trophy className="h-4 w-4 mr-2" />
+            Create Team Profile
+          </Button>
+        )}
         <Button variant="outline" size="sm" onClick={() => navigate("/player/profile")}>
           <UserIcon className="h-4 w-4 mr-2" />
           Profile

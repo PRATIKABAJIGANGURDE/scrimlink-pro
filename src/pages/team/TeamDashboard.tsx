@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
   getCurrentTeam,
+  getCurrentPlayer,
   signOut,
   getJoinRequestsByTeamId,
   getPlayersByTeamId,
@@ -27,7 +28,8 @@ import {
   getTeamOffers,
   getTransferRequestsForCaptain,
   updateApplicationStatus,
-  approveTransferExit
+  approveTransferExit,
+  disconnectPlayer
 } from "@/lib/storage";
 import { Team, JoinRequest, Player, Scrim, Match, MatchTeamStats, ScrimTeam } from "@/types";
 import { Trophy, Users, Copy, Check, LogOut, UserPlus, UserCheck, UserX, Target, Calendar, Plus, BarChart, Crown, Briefcase, Lock } from "lucide-react";
@@ -55,6 +57,7 @@ const TeamDashboard = () => {
   const [copied, setCopied] = useState(false);
   const [isCreateScrimOpen, setIsCreateScrimOpen] = useState(false);
   const [creatingScrim, setCreatingScrim] = useState(false);
+  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
 
   const [newScrim, setNewScrim] = useState({
     name: "",
@@ -84,6 +87,10 @@ const TeamDashboard = () => {
           return;
         }
         setTeam(currentTeam);
+        // Check for player profile
+        const playerProfile = await getCurrentPlayer();
+        setCurrentPlayer(playerProfile);
+
         loadData(currentTeam.id);
       } catch (error) {
         console.error("Failed to load team:", error);
@@ -302,6 +309,17 @@ const TeamDashboard = () => {
         variant="dashboard"
         icon={<Trophy className="h-8 w-8 text-primary" />}
       >
+        {currentPlayer && currentPlayer.teamId === team.id && currentPlayer.role === 'IGL' ? (
+          <Button variant="secondary" size="sm" onClick={() => navigate("/player/dashboard")}>
+            <Users className="h-4 w-4 mr-2" />
+            Switch to IGL Profile
+          </Button>
+        ) : (
+          <Button variant="default" size="sm" onClick={() => navigate("/player/register?mode=connect_igl")}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Connect Leader
+          </Button>
+        )}
         <Button variant="outline" size="sm" onClick={() => navigate("/rankings")}>
           <Crown className="h-4 w-4 mr-2" />
           Rankings
@@ -554,7 +572,44 @@ const TeamDashboard = () => {
                             <p className="text-sm text-muted-foreground break-all">{player.email}</p>
                           </div>
                         </div>
-                        <Badge variant="secondary" className="ml-auto sm:ml-0">Active</Badge>
+                        <div className="flex items-center gap-2 ml-auto">
+                          <Badge variant="secondary">Active</Badge>
+                          {player.role === 'IGL' && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm" className="h-6 text-xs bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/20 border">
+                                  Disconnect
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Disconnect Leader?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will remove the IGL from the team. They will become a free agent.
+                                    <br /><br />
+                                    <strong>Note:</strong> Since this IGL profile is linked to your account, you will still be able to switch to it, but it will no longer be part of this team.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={async () => {
+                                    try {
+                                      await disconnectPlayer(player.id);
+                                      toast({ title: "Disconnected", description: "IGL disconnected successfully." });
+                                      loadData(team.id);
+                                      const updatedPlayer = await getCurrentPlayer();
+                                      setCurrentPlayer(updatedPlayer);
+                                    } catch (e: any) {
+                                      toast({ title: "Error", description: e.message, variant: "destructive" });
+                                    }
+                                  }} className="bg-destructive text-destructive-foreground">
+                                    Disconnect
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

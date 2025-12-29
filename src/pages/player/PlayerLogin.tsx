@@ -33,12 +33,12 @@ const PlayerLogin = () => {
             navigate("/player/dashboard");
           }
         } else {
-          // User is logged in but not as a player (likely a team)
+          // User is logged in but not as a player. Redirect to register to create profile.
           toast({
-            title: "Active Session Detected",
-            description: "You are currently logged in as a Team. Log in below to switch to a Player account.",
-            variant: "default"
+            title: "Create Player Profile",
+            description: "You are logged in. Let's set up your player profile.",
           });
+          navigate("/player/register");
         }
       }
     };

@@ -29,12 +29,12 @@ const TeamLogin = () => {
         if (team) {
           navigate("/team/dashboard");
         } else {
-          // User is logged in but not as a team (likely a player)
+          // User is logged in but not as a team. Redirect to register to create profile.
           toast({
-            title: "Active Session Detected",
-            description: "You are currently logged in as a Player. Log in below to switch to a Team account.",
-            variant: "default"
+            title: "Create Team Profile",
+            description: "You are logged in. Let's set up your team profile.",
           });
+          navigate("/team/register");
         }
       }
     };

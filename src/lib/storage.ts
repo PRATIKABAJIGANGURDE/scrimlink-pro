@@ -106,6 +106,8 @@ export const savePlayer = async (player: Player): Promise<void> => {
     email: player.email,
     team_id: player.teamId,
     status: player.status,
+    role: player.role,
+    phone_number: player.phoneNumber, // also missing phone number!
     created_at: player.createdAt
   });
   if (error) throw error;
@@ -193,6 +195,19 @@ export const updatePlayer = async (playerId: string, updates: Partial<Player>): 
   const { error } = await supabase
     .from('players')
     .update(dbUpdates)
+    .eq('id', playerId);
+
+  if (error) throw error;
+};
+
+export const disconnectPlayer = async (playerId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('players')
+    .update({
+      team_id: null,
+      role: null,
+      status: 'pending' // Set to pending so they are not active in any team
+    })
     .eq('id', playerId);
 
   if (error) throw error;
