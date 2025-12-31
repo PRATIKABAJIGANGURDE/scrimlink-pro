@@ -164,7 +164,7 @@ const TeamDashboard = () => {
         hostTeamId: team.id,
         matchCount: newScrim.matchCount,
         status: 'upcoming',
-        startTime: newScrim.startTime,
+        startTime: new Date(newScrim.startTime).toISOString(),
         createdAt: new Date().toISOString(),
       };
 
