@@ -20,7 +20,8 @@ import {
     getTeams,
     getPlayers,
     getAllReportsForAdmin,
-    getAllTransferActivitiesForAdmin
+    getAllTransferActivitiesForAdmin,
+    fixUsernameSpaces
 } from "@/lib/storage";
 import { Scrim, Match, Team, Player } from "@/types";
 import { Shield, LogOut, Plus, Target, Calendar, Trophy, BarChart, Users, User, AlertTriangle } from "lucide-react";
@@ -37,6 +38,9 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+import { adminCreatePlayer, adminCreateTeam } from "@/lib/adminAuth";
+import { Copy, UserPlus } from "lucide-react";
+
 const AdminDashboard = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
@@ -50,6 +54,12 @@ const AdminDashboard = () => {
     const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
     const [isCreateScrimOpen, setIsCreateScrimOpen] = useState(false);
     const [creatingScrim, setCreatingScrim] = useState(false);
+
+    // User Management State
+    const [isCreatingUser, setIsCreatingUser] = useState(false);
+    const [createdCredentials, setCreatedCredentials] = useState<{ email: string, password: string } | null>(null);
+    const [newTeam, setNewTeam] = useState({ name: "", email: "", password: "", joinCode: "" });
+    const [newPlayer, setNewPlayer] = useState({ username: "", email: "", password: "", phoneNumber: "", joinCode: "" });
 
     const [newScrim, setNewScrim] = useState({
         name: "",
@@ -167,6 +177,58 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleCreateTeam = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsCreatingUser(true);
+        try {
+            await adminCreateTeam(newTeam.email, newTeam.password, newTeam.name, newTeam.joinCode);
+            setCreatedCredentials({ email: newTeam.email, password: newTeam.password });
+            setNewTeam({ name: "", email: "", password: "", joinCode: "" }); // Reset form
+            toast({ title: "Success", description: "Team created successfully" });
+            loadData();
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message, variant: "destructive" });
+        } finally {
+            setIsCreatingUser(false);
+        }
+    };
+
+    const handleCreatePlayer = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsCreatingUser(true);
+        try {
+            await adminCreatePlayer(newPlayer.email, newPlayer.password, newPlayer.username, newPlayer.joinCode || undefined, undefined, newPlayer.phoneNumber);
+            setCreatedCredentials({ email: newPlayer.email, password: newPlayer.password });
+            setNewPlayer({ username: "", email: "", password: "", phoneNumber: "", joinCode: "" }); // Reset form
+            toast({ title: "Success", description: "Player created successfully" });
+            loadData();
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message, variant: "destructive" });
+        } finally {
+            setIsCreatingUser(false);
+        }
+    };
+
+    const handleFixUsernames = async () => {
+        setLoading(true);
+        try {
+            const count = await fixUsernameSpaces();
+            toast({
+                title: "Usernames Fixed",
+                description: `Updated ${count} usernames by removing spaces.`,
+            });
+            loadData();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to fix usernames",
+                variant: "destructive"
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleLogout = async () => {
         await signOut();
         navigate("/");
@@ -222,6 +284,7 @@ const AdminDashboard = () => {
                 <Tabs defaultValue="scrims" className="space-y-4">
                     <TabsList>
                         <TabsTrigger value="scrims">Scrims</TabsTrigger>
+                        <TabsTrigger value="users">User Management</TabsTrigger>
                         <TabsTrigger value="teams">Teams</TabsTrigger>
                         <TabsTrigger value="players">Players</TabsTrigger>
                         <TabsTrigger value="reports" className="flex items-center gap-2">
@@ -464,9 +527,15 @@ const AdminDashboard = () => {
 
                     <TabsContent value="players">
                         <Card>
-                            <CardHeader>
-                                <CardTitle>Registered Players</CardTitle>
-                                <CardDescription>List of all registered players</CardDescription>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle>Registered Players</CardTitle>
+                                    <CardDescription>List of all registered players</CardDescription>
+                                </div>
+                                <Button variant="outline" size="sm" onClick={handleFixUsernames}>
+                                    <User className="h-4 w-4 mr-2" />
+                                    Fix Usernames
+                                </Button>
                             </CardHeader>
                             <CardContent>
                                 <Table>
@@ -642,8 +711,176 @@ const AdminDashboard = () => {
                         </Card>
                     </TabsContent>
 
+                    <TabsContent value="users">
+                        <div className="grid gap-6 md:grid-cols-2">
+                            {/* Create Team Form */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Create Team</CardTitle>
+                                    <CardDescription>Manually register a new team.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <form onSubmit={handleCreateTeam} className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="teamName">Team Name</Label>
+                                            <Input
+                                                id="teamName"
+                                                value={newTeam.name}
+                                                onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="teamEmail">Email</Label>
+                                            <Input
+                                                id="teamEmail"
+                                                type="email"
+                                                value={newTeam.email}
+                                                onChange={(e) => setNewTeam({ ...newTeam, email: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="teamPassword">Password</Label>
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    id="teamPassword"
+                                                    value={newTeam.password}
+                                                    onChange={(e) => setNewTeam({ ...newTeam, password: e.target.value })}
+                                                    required
+                                                />
+                                                <Button type="button" variant="outline" onClick={() => setNewTeam({ ...newTeam, password: Math.random().toString(36).slice(-8) })}>
+                                                    Generate
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="teamJoinCode">Join Code</Label>
+                                            <Input
+                                                id="teamJoinCode"
+                                                value={newTeam.joinCode}
+                                                onChange={(e) => setNewTeam({ ...newTeam, joinCode: e.target.value.toUpperCase() })}
+                                                required
+                                                maxLength={6}
+                                            />
+                                        </div>
+                                        <Button type="submit" disabled={isCreatingUser} className="w-full">
+                                            {isCreatingUser ? "Creating..." : "Create Team"}
+                                        </Button>
+                                    </form>
+                                </CardContent>
+                            </Card>
+
+                            {/* Create Player Form */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Create Player</CardTitle>
+                                    <CardDescription>Manually register a player.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <form onSubmit={handleCreatePlayer} className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="playerUsername">Username</Label>
+                                            <Input
+                                                id="playerUsername"
+                                                value={newPlayer.username}
+                                                onChange={(e) => setNewPlayer({ ...newPlayer, username: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="playerEmail">Email</Label>
+                                            <Input
+                                                id="playerEmail"
+                                                type="email"
+                                                value={newPlayer.email}
+                                                onChange={(e) => setNewPlayer({ ...newPlayer, email: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="playerPassword">Password</Label>
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    id="playerPassword"
+                                                    value={newPlayer.password}
+                                                    onChange={(e) => setNewPlayer({ ...newPlayer, password: e.target.value })}
+                                                    required
+                                                />
+                                                <Button type="button" variant="outline" onClick={() => setNewPlayer({ ...newPlayer, password: Math.random().toString(36).slice(-8) })}>
+                                                    Generate
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="playerPhone">Phone Number</Label>
+                                            <Input
+                                                id="playerPhone"
+                                                value={newPlayer.phoneNumber}
+                                                onChange={(e) => setNewPlayer({ ...newPlayer, phoneNumber: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="playerJoinCode">Join Team Code (Optional)</Label>
+                                            <Input
+                                                id="playerJoinCode"
+                                                value={newPlayer.joinCode}
+                                                onChange={(e) => setNewPlayer({ ...newPlayer, joinCode: e.target.value.toUpperCase() })}
+                                                placeholder="Leave empty for Free Agent"
+                                            />
+                                        </div>
+                                        <Button type="submit" disabled={isCreatingUser} className="w-full">
+                                            {isCreatingUser ? "Creating..." : "Create Player"}
+                                        </Button>
+                                    </form>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </TabsContent>
+
                 </Tabs>
-            </main>
+
+                {/* Credentials Dialog */}
+                <Dialog open={!!createdCredentials} onOpenChange={(open) => !open && setCreatedCredentials(null)}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Account Created Successfully</DialogTitle>
+                            <DialogDescription>
+                                Copy these credentials and send them to the user.
+                            </DialogDescription>
+                        </DialogHeader>
+                        {createdCredentials && (
+                            <div className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                    <Label>Email</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input readOnly value={createdCredentials.email} />
+                                        <Button size="icon" variant="outline" onClick={() => navigator.clipboard.writeText(createdCredentials.email)}>
+                                            <Copy className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Password</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input readOnly value={createdCredentials.password} />
+                                        <Button size="icon" variant="outline" onClick={() => navigator.clipboard.writeText(createdCredentials.password)}>
+                                            <Copy className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="bg-muted p-3 rounded-md text-sm text-yellow-600 flex items-center gap-2">
+                                    <AlertTriangle className="h-4 w-4" />
+                                    Make sure to copy these now. You won't see the password again.
+                                </div>
+                            </div>
+                        )}
+                        <DialogFooter>
+                            <Button onClick={() => setCreatedCredentials(null)}>Close</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>            </main>
         </div>
     );
 };

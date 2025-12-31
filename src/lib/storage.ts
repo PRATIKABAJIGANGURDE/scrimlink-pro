@@ -1851,3 +1851,30 @@ export const submitFeedback = async (playerId: string, content: string, tag: str
 
   if (error) throw error;
 };
+
+// --- FIX USERNAME UTILITY ---
+export const fixUsernameSpaces = async (): Promise<number> => {
+  // 1. Get all players
+  const { data: players, error } = await supabase.from('players').select('id, username');
+  if (error) throw error;
+  if (!players) return 0;
+
+  let count = 0;
+  const updates = [];
+
+  for (const p of players) {
+    if (p.username && /\s/.test(p.username)) {
+      const newUsername = p.username.replace(/\s+/g, ''); // Remove all spaces
+      updates.push(
+        supabase.from('players').update({ username: newUsername }).eq('id', p.id)
+      );
+      count++;
+    }
+  }
+
+  if (updates.length > 0) {
+    await Promise.all(updates);
+  }
+
+  return count;
+};

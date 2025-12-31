@@ -131,10 +131,17 @@ const PlayerRegister = () => {
     }
 
     // Manual validation if adding profile
-    if (isAddingProfile && (!formData.username || !formData.phoneNumber)) {
-      toast({ title: "Validation Error", description: "Username and Phone Number are required", variant: "destructive" });
-      setLoading(false);
-      return;
+    if (isAddingProfile) {
+      if (!formData.username || !formData.phoneNumber) {
+        toast({ title: "Validation Error", description: "Username and Phone Number are required", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+      if (/\s/.test(formData.username)) {
+        toast({ title: "Validation Error", description: "Username cannot contain spaces", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
     }
 
     try {
