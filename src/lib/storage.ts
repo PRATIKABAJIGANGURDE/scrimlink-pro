@@ -1462,6 +1462,41 @@ export const deleteRecruitmentPost = async (postId: string) => {
   if (error) throw error;
 };
 
+export const getAllRecruitmentPostsForAdmin = async () => {
+  const { data, error } = await supabase
+    .from('recruitment_posts')
+    .select(`
+      *,
+      author:players(username, in_game_name, profile_url, role),
+      team:teams(name, logo_url)
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return data.map((post: any) => ({
+    id: post.id,
+    type: post.type,
+    authorId: post.author_id,
+    teamId: post.team_id,
+    role: post.role,
+    description: post.description,
+    minKd: post.min_kd,
+    status: post.status,
+    createdAt: post.created_at,
+    author: {
+      username: post.author?.username,
+      inGameName: post.author?.in_game_name,
+      profileUrl: post.author?.profile_url,
+      role: post.author?.role
+    },
+    team: post.team ? {
+      name: post.team.name,
+      logoUrl: post.team.logo_url
+    } : undefined
+  }));
+};
+
 // --- Advanced Transfer System ---
 
 export const applyToTeam = async (postId: string, message: string) => {

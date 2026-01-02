@@ -21,7 +21,9 @@ import {
     getPlayers,
     getAllReportsForAdmin,
     getAllTransferActivitiesForAdmin,
-    fixUsernameSpaces
+    fixUsernameSpaces,
+    getAllRecruitmentPostsForAdmin,
+    deleteRecruitmentPost
 } from "@/lib/storage";
 import { Scrim, Match, Team, Player } from "@/types";
 import { Shield, LogOut, Plus, Target, Calendar, Trophy, BarChart, Users, User, AlertTriangle } from "lucide-react";
@@ -52,6 +54,7 @@ const AdminDashboard = () => {
     const [players, setPlayers] = useState<Player[]>([]);
     const [reports, setReports] = useState<any[]>([]);
     const [transfers, setTransfers] = useState<any[]>([]);
+    const [recruitmentPosts, setRecruitmentPosts] = useState<any[]>([]);
     const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
     const [isCreateScrimOpen, setIsCreateScrimOpen] = useState(false);
     const [creatingScrim, setCreatingScrim] = useState(false);
@@ -102,18 +105,20 @@ const AdminDashboard = () => {
 
     const loadData = async () => {
         try {
-            const [allScrims, allTeams, allPlayers, allReports, allTransfers] = await Promise.all([
+            const [allScrims, allTeams, allPlayers, allReports, allTransfers, allRecruitmentPosts] = await Promise.all([
                 getScrims(),
                 getTeams(),
                 getPlayers(),
                 getAllReportsForAdmin(1, 100),
-                getAllTransferActivitiesForAdmin(100)
+                getAllTransferActivitiesForAdmin(100),
+                getAllRecruitmentPostsForAdmin()
             ]);
             setScrims(allScrims);
             setTeams(allTeams);
             setPlayers(allPlayers);
             setReports(allReports.data);
             setTransfers(allTransfers);
+            setRecruitmentPosts(allRecruitmentPosts);
         } catch (error) {
             console.error("Failed to load data:", error);
             toast({
@@ -230,6 +235,16 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleDeleteRecruitmentPost = async (postId: string) => {
+        try {
+            await deleteRecruitmentPost(postId);
+            toast({ title: "Success", description: "Post deleted" });
+            loadData();
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message, variant: "destructive" });
+        }
+    };
+
     const handleLogout = async () => {
         await signOut();
         navigate("/");
@@ -292,6 +307,7 @@ const AdminDashboard = () => {
                             <AlertTriangle className="h-4 w-4" />
                             Reports
                         </TabsTrigger>
+                        <TabsTrigger value="recruitment">Recruitment</TabsTrigger>
                         <TabsTrigger value="transfers">Transfers</TabsTrigger>
                     </TabsList>
 
@@ -652,6 +668,73 @@ const AdminDashboard = () => {
                                             <TableRow>
                                                 <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                                                     No reports found
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    <TabsContent value="recruitment">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Recruitment Posts</CardTitle>
+                                <CardDescription>Manage Looking for Team (LFT) and Looking for User (LFP) posts.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Type</TableHead>
+                                            <TableHead>Author/Team</TableHead>
+                                            <TableHead>Role</TableHead>
+                                            <TableHead>Description</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {recruitmentPosts.map((post) => (
+                                            <TableRow key={post.id}>
+                                                <TableCell>{new Date(post.createdAt).toLocaleDateString()}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={post.type === 'LFT' ? 'secondary' : 'default'}>
+                                                        {post.type}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {post.type === 'LFT' ? (
+                                                        <div className="flex flex-col">
+                                                            <span className="font-medium">{post.author?.username}</span>
+                                                            <span className="text-xs text-muted-foreground">{post.author?.inGameName}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="font-medium">{post.team?.name}</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>{post.role}</TableCell>
+                                                <TableCell className="max-w-[200px] truncate" title={post.description}>
+                                                    {post.description}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant={post.status === 'active' ? 'outline' : 'secondary'}>
+                                                        {post.status.toUpperCase()}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Button variant="destructive" size="sm" onClick={() => handleDeleteRecruitmentPost(post.id)}>
+                                                        <LogOut className="h-4 w-4" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {recruitmentPosts.length === 0 && (
+                                            <TableRow>
+                                                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                                                    No posts found
                                                 </TableCell>
                                             </TableRow>
                                         )}

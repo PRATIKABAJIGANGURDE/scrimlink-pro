@@ -179,7 +179,13 @@ const PublicPlayerProfile = () => {
                                             size="sm"
                                             asChild
                                         >
-                                            <a href={`https://discord.com/users/${player.discordUsername}`} target="_blank" rel="noopener noreferrer">
+                                            <a
+                                                href={player.discordUsername.startsWith('http') || player.discordUsername.includes('discord.gg')
+                                                    ? (player.discordUsername.startsWith('http') ? player.discordUsername : `https://${player.discordUsername}`)
+                                                    : `https://discord.com/users/${player.discordUsername}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
                                                 <MessageSquare className="h-4 w-4 mr-2 text-indigo-500" />
                                                 Discord
                                             </a>
