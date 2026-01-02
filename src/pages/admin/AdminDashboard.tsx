@@ -40,6 +40,7 @@ import {
 
 import { adminCreatePlayer, adminCreateTeam } from "@/lib/adminAuth";
 import { Copy, UserPlus } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
@@ -58,8 +59,8 @@ const AdminDashboard = () => {
     // User Management State
     const [isCreatingUser, setIsCreatingUser] = useState(false);
     const [createdCredentials, setCreatedCredentials] = useState<{ email: string, password: string } | null>(null);
-    const [newTeam, setNewTeam] = useState({ name: "", email: "", password: "", joinCode: "" });
-    const [newPlayer, setNewPlayer] = useState({ username: "", email: "", password: "", phoneNumber: "", joinCode: "" });
+    const [newTeam, setNewTeam] = useState({ name: "", email: "", password: "", joinCode: "", country: "" });
+    const [newPlayer, setNewPlayer] = useState({ username: "", email: "", password: "", phoneNumber: "", joinCode: "", role: "" });
 
     const [newScrim, setNewScrim] = useState({
         name: "",
@@ -181,9 +182,9 @@ const AdminDashboard = () => {
         e.preventDefault();
         setIsCreatingUser(true);
         try {
-            await adminCreateTeam(newTeam.email, newTeam.password, newTeam.name, newTeam.joinCode);
+            await adminCreateTeam(newTeam.email, newTeam.password, newTeam.name, newTeam.joinCode, newTeam.country);
             setCreatedCredentials({ email: newTeam.email, password: newTeam.password });
-            setNewTeam({ name: "", email: "", password: "", joinCode: "" }); // Reset form
+            setNewTeam({ name: "", email: "", password: "", joinCode: "", country: "" }); // Reset form
             toast({ title: "Success", description: "Team created successfully" });
             loadData();
         } catch (error: any) {
@@ -197,9 +198,9 @@ const AdminDashboard = () => {
         e.preventDefault();
         setIsCreatingUser(true);
         try {
-            await adminCreatePlayer(newPlayer.email, newPlayer.password, newPlayer.username, newPlayer.joinCode || undefined, undefined, newPlayer.phoneNumber);
+            await adminCreatePlayer(newPlayer.email, newPlayer.password, newPlayer.username, newPlayer.joinCode || undefined, newPlayer.role || undefined, newPlayer.phoneNumber);
             setCreatedCredentials({ email: newPlayer.email, password: newPlayer.password });
-            setNewPlayer({ username: "", email: "", password: "", phoneNumber: "", joinCode: "" }); // Reset form
+            setNewPlayer({ username: "", email: "", password: "", phoneNumber: "", joinCode: "", role: "" }); // Reset form
             toast({ title: "Success", description: "Player created successfully" });
             loadData();
         } catch (error: any) {
@@ -712,131 +713,180 @@ const AdminDashboard = () => {
                     </TabsContent>
 
                     <TabsContent value="users">
-                        <div className="grid gap-6 md:grid-cols-2">
-                            {/* Create Team Form */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Create Team</CardTitle>
-                                    <CardDescription>Manually register a new team.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <form onSubmit={handleCreateTeam} className="space-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="teamName">Team Name</Label>
-                                            <Input
-                                                id="teamName"
-                                                value={newTeam.name}
-                                                onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
-                                                required
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="teamEmail">Email</Label>
-                                            <Input
-                                                id="teamEmail"
-                                                type="email"
-                                                value={newTeam.email}
-                                                onChange={(e) => setNewTeam({ ...newTeam, email: e.target.value })}
-                                                required
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="teamPassword">Password</Label>
-                                            <div className="flex gap-2">
-                                                <Input
-                                                    id="teamPassword"
-                                                    value={newTeam.password}
-                                                    onChange={(e) => setNewTeam({ ...newTeam, password: e.target.value })}
-                                                    required
-                                                />
-                                                <Button type="button" variant="outline" onClick={() => setNewTeam({ ...newTeam, password: Math.random().toString(36).slice(-8) })}>
-                                                    Generate
-                                                </Button>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="teamJoinCode">Join Code</Label>
-                                            <Input
-                                                id="teamJoinCode"
-                                                value={newTeam.joinCode}
-                                                onChange={(e) => setNewTeam({ ...newTeam, joinCode: e.target.value.toUpperCase() })}
-                                                required
-                                                maxLength={6}
-                                            />
-                                        </div>
-                                        <Button type="submit" disabled={isCreatingUser} className="w-full">
-                                            {isCreatingUser ? "Creating..." : "Create Team"}
-                                        </Button>
-                                    </form>
-                                </CardContent>
-                            </Card>
+                        <Tabs defaultValue="team" className="w-full">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="team">Create Team</TabsTrigger>
+                                <TabsTrigger value="player">Create Player</TabsTrigger>
+                            </TabsList>
 
-                            {/* Create Player Form */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Create Player</CardTitle>
-                                    <CardDescription>Manually register a player.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <form onSubmit={handleCreatePlayer} className="space-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="playerUsername">Username</Label>
-                                            <Input
-                                                id="playerUsername"
-                                                value={newPlayer.username}
-                                                onChange={(e) => setNewPlayer({ ...newPlayer, username: e.target.value })}
-                                                required
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="playerEmail">Email</Label>
-                                            <Input
-                                                id="playerEmail"
-                                                type="email"
-                                                value={newPlayer.email}
-                                                onChange={(e) => setNewPlayer({ ...newPlayer, email: e.target.value })}
-                                                required
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="playerPassword">Password</Label>
-                                            <div className="flex gap-2">
+                            <TabsContent value="team">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Create Team</CardTitle>
+                                        <CardDescription>Register a new team with all details.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <form onSubmit={handleCreateTeam} className="space-y-4">
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="teamName">Team Name</Label>
+                                                    <Input
+                                                        id="teamName"
+                                                        value={newTeam.name}
+                                                        onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="teamCountry">Country</Label>
+                                                    <Input
+                                                        id="teamCountry"
+                                                        value={newTeam.country}
+                                                        onChange={(e) => setNewTeam({ ...newTeam, country: e.target.value })}
+                                                        placeholder="e.g. India"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="teamEmail">Email</Label>
                                                 <Input
-                                                    id="playerPassword"
-                                                    value={newPlayer.password}
-                                                    onChange={(e) => setNewPlayer({ ...newPlayer, password: e.target.value })}
+                                                    id="teamEmail"
+                                                    type="email"
+                                                    value={newTeam.email}
+                                                    onChange={(e) => setNewTeam({ ...newTeam, email: e.target.value })}
                                                     required
                                                 />
-                                                <Button type="button" variant="outline" onClick={() => setNewPlayer({ ...newPlayer, password: Math.random().toString(36).slice(-8) })}>
-                                                    Generate
-                                                </Button>
                                             </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="playerPhone">Phone Number</Label>
-                                            <Input
-                                                id="playerPhone"
-                                                value={newPlayer.phoneNumber}
-                                                onChange={(e) => setNewPlayer({ ...newPlayer, phoneNumber: e.target.value })}
-                                                required
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="playerJoinCode">Join Team Code (Optional)</Label>
-                                            <Input
-                                                id="playerJoinCode"
-                                                value={newPlayer.joinCode}
-                                                onChange={(e) => setNewPlayer({ ...newPlayer, joinCode: e.target.value.toUpperCase() })}
-                                                placeholder="Leave empty for Free Agent"
-                                            />
-                                        </div>
-                                        <Button type="submit" disabled={isCreatingUser} className="w-full">
-                                            {isCreatingUser ? "Creating..." : "Create Player"}
-                                        </Button>
-                                    </form>
-                                </CardContent>
-                            </Card>
-                        </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="teamPassword">Password</Label>
+                                                <div className="flex gap-2">
+                                                    <Input
+                                                        id="teamPassword"
+                                                        value={newTeam.password}
+                                                        onChange={(e) => setNewTeam({ ...newTeam, password: e.target.value })}
+                                                        required
+                                                    />
+                                                    <Button type="button" variant="outline" onClick={() => setNewTeam({ ...newTeam, password: Math.random().toString(36).slice(-8) })}>
+                                                        Generate
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="teamJoinCode">Join Code</Label>
+                                                <div className="flex gap-2">
+                                                    <Input
+                                                        id="teamJoinCode"
+                                                        value={newTeam.joinCode}
+                                                        onChange={(e) => setNewTeam({ ...newTeam, joinCode: e.target.value.toUpperCase() })}
+                                                        required
+                                                        maxLength={6}
+                                                    />
+                                                    <Button type="button" variant="outline" onClick={() => setNewTeam({ ...newTeam, joinCode: Math.random().toString(36).substring(2, 8).toUpperCase() })}>
+                                                        Generate
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                            <Button type="submit" disabled={isCreatingUser} className="w-full">
+                                                {isCreatingUser ? "Creating..." : "Create Team"}
+                                            </Button>
+                                        </form>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+
+                            <TabsContent value="player">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Create Player</CardTitle>
+                                        <CardDescription>Register a new player. Specify a team code to auto-join.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <form onSubmit={handleCreatePlayer} className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="playerUsername">Username</Label>
+                                                <Input
+                                                    id="playerUsername"
+                                                    value={newPlayer.username}
+                                                    onChange={(e) => setNewPlayer({ ...newPlayer, username: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="playerEmail">Email</Label>
+                                                <Input
+                                                    id="playerEmail"
+                                                    type="email"
+                                                    value={newPlayer.email}
+                                                    onChange={(e) => setNewPlayer({ ...newPlayer, email: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="playerPassword">Password</Label>
+                                                <div className="flex gap-2">
+                                                    <Input
+                                                        id="playerPassword"
+                                                        value={newPlayer.password}
+                                                        onChange={(e) => setNewPlayer({ ...newPlayer, password: e.target.value })}
+                                                        required
+                                                    />
+                                                    <Button type="button" variant="outline" onClick={() => setNewPlayer({ ...newPlayer, password: Math.random().toString(36).slice(-8) })}>
+                                                        Generate
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="playerPhone">Phone Number</Label>
+                                                <Input
+                                                    id="playerPhone"
+                                                    value={newPlayer.phoneNumber}
+                                                    onChange={(e) => setNewPlayer({ ...newPlayer, phoneNumber: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="playerJoinCode">Join Team Code (Optional)</Label>
+                                                    <Input
+                                                        id="playerJoinCode"
+                                                        value={newPlayer.joinCode}
+                                                        onChange={(e) => setNewPlayer({ ...newPlayer, joinCode: e.target.value.toUpperCase() })}
+                                                        placeholder="Leave empty for Free Agent"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Role</Label>
+                                                    <Select
+                                                        value={newPlayer.role}
+                                                        onValueChange={(value) => setNewPlayer({ ...newPlayer, role: value })}
+                                                        required={!!newPlayer.joinCode}
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select Role" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="IGL">IGL</SelectItem>
+                                                            <SelectItem value="Rusher">Rusher</SelectItem>
+                                                            <SelectItem value="Sniper">Sniper</SelectItem>
+                                                            <SelectItem value="Flanker">Flanker</SelectItem>
+                                                            <SelectItem value="Support">Support</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    {newPlayer.joinCode && !newPlayer.role && (
+                                                        <p className="text-xs text-destructive">Role is required when joining a team.</p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <Button type="submit" disabled={isCreatingUser} className="w-full">
+                                                {isCreatingUser ? "Creating..." : "Create Player"}
+                                            </Button>
+                                        </form>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                        </Tabs>
                     </TabsContent>
 
                 </Tabs>

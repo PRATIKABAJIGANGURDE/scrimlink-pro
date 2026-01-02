@@ -27,7 +27,8 @@ export const adminCreateTeam = async (email: string, password: string, name: str
                 type: 'team',
                 name,
                 joinCode,
-                country
+                country,
+                createdByAdmin: true
             }
         }
     });
@@ -62,7 +63,8 @@ export const adminCreatePlayer = async (email: string, password: string, usernam
                 username,
                 teamId: teamId,
                 role: role || null,
-                phone_number: phoneNumber || null
+                phone_number: phoneNumber || null,
+                createdByAdmin: true
             }
         }
     });

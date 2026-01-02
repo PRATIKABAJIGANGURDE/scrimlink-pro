@@ -793,8 +793,12 @@ export const signIn = async (email: string, password: string) => {
   if (error) throw error;
 
   if (data.user && !data.user.email_confirmed_at) {
-    await supabase.auth.signOut();
-    throw new Error("Please verify your email address before logging in.");
+    const metadata = data.user.user_metadata || {};
+    // Only allow login if strictly created by admin
+    if (!metadata.createdByAdmin) {
+      await supabase.auth.signOut();
+      throw new Error("Please verify your email address before logging in.");
+    }
   }
 
   return data.user;
