@@ -171,7 +171,11 @@ const Recruitment = () => {
     }
 
     return (
-        <div className="min-h-screen bg-background p-4 md:p-8">
+        <div className="min-h-screen bg-background p-4 md:p-8 pt-12 md:pt-16">
+            <div className="h-8 w-full bg-[#5865F2] text-white flex items-center justify-center text-xs font-medium z-[60] fixed top-0 left-0">
+                <span>Join Discord for announcements and updates - </span>
+                <a href="https://discord.gg/nqdwesGE4g" target="_blank" rel="noopener noreferrer" className="ml-1 underline hover:text-white/90 font-bold">Click Here</a>
+            </div>
             <div className="max-w-6xl mx-auto space-y-6">
                 <div className="flex items-center">
                     <Button variant="ghost" className="gap-2 -ml-4 md:ml-0 text-muted-foreground hover:text-foreground" onClick={() => navigate(-1)}>

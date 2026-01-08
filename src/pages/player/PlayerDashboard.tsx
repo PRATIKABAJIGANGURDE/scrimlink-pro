@@ -252,7 +252,7 @@ const PlayerDashboard = () => {
         </AlertDialog>
       </ResponsiveNavbar>
 
-      <main className="container mx-auto px-4 pt-24 md:pt-8 pb-8">
+      <main className="container mx-auto px-4 pt-32 md:pt-8 pb-8">
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>

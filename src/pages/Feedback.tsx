@@ -116,7 +116,7 @@ const Feedback = () => {
                 </Button>
             </ResponsiveNavbar>
 
-            <main className="container mx-auto px-4 pt-24 md:pt-8 pb-8 space-y-8">
+            <main className="container mx-auto px-4 pt-32 md:pt-8 pb-8 space-y-8">
                 {/* Submit Feedback Section */}
                 <Card className="border-primary/20 bg-primary/5">
                     <CardHeader>

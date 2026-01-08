@@ -120,7 +120,11 @@ const Rankings = () => {
 
     return (
         <div className="min-h-screen bg-background">
-            <header className="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-6xl z-50 rounded-xl border border-border/40 bg-background/70 backdrop-blur-md shadow-sm">
+            <div className="h-8 w-full bg-[#5865F2] text-white flex items-center justify-center text-xs font-medium z-[60] fixed top-0 left-0">
+                <span>Join Discord for announcements and updates - </span>
+                <a href="https://discord.gg/nqdwesGE4g" target="_blank" rel="noopener noreferrer" className="ml-1 underline hover:text-white/90 font-bold">Click Here</a>
+            </div>
+            <header className="fixed top-12 left-1/2 -translate-x-1/2 w-[95%] max-w-6xl z-50 rounded-xl border border-border/40 bg-background/70 backdrop-blur-md shadow-sm">
                 <div className="container mx-auto px-4 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
@@ -139,7 +143,7 @@ const Rankings = () => {
                 </div>
             </header>
 
-            <main className="container mx-auto px-4 pt-24 pb-8 max-w-6xl space-y-8">
+            <main className="container mx-auto px-4 pt-32 pb-8 max-w-6xl space-y-8">
 
                 {error && (
                     <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-md mb-6">

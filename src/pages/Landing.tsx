@@ -77,7 +77,7 @@ const Landing = () => {
         </Link>
       </ResponsiveNavbar>
 
-      <main className="flex-1 pt-24">
+      <main className="flex-1 pt-32">
         {/* Hero Section - Split View */}
         <section className="py-12 md:py-20 lg:py-32">
           <div className="container mx-auto px-4">

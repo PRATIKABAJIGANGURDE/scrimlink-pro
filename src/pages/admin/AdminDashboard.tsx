@@ -296,7 +296,7 @@ const AdminDashboard = () => {
                 </AlertDialog>
             </ResponsiveNavbar>
 
-            <main className="container mx-auto px-4 pt-24 pb-8">
+            <main className="container mx-auto px-4 pt-32 pb-8">
                 <Tabs defaultValue="scrims" className="space-y-4">
                     <TabsList>
                         <TabsTrigger value="scrims">Scrims</TabsTrigger>

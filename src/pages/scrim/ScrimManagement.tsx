@@ -414,7 +414,11 @@ const ScrimManagement = () => {
     if (!scrim) return <div className="p-8 text-center">Loading...</div>;
 
     return (
-        <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
+        <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto pt-12 md:pt-16">
+            <div className="h-8 w-full bg-[#5865F2] text-white flex items-center justify-center text-xs font-medium z-[60] fixed top-0 left-0">
+                <span>Join Discord for announcements and updates - </span>
+                <a href="https://discord.gg/nqdwesGE4g" target="_blank" rel="noopener noreferrer" className="ml-1 underline hover:text-white/90 font-bold">Click Here</a>
+            </div>
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex flex-col gap-2 w-full md:w-auto">
                     <Button variant="ghost" className="w-fit -ml-2" onClick={() => {

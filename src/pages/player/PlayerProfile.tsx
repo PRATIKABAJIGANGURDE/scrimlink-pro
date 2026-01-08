@@ -130,7 +130,7 @@ const PlayerProfile = () => {
                 </Button>
             </ResponsiveNavbar>
 
-            <main className="container mx-auto px-4 pt-24 md:pt-8 pb-8">
+            <main className="container mx-auto px-4 pt-32 md:pt-8 pb-8">
                 {/* Profile Header Card */}
                 <Card className="mb-8">
                     <CardHeader>
