@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getCurrentPlayer, getCurrentTeam, signOut, getTeamById, getPlayerStats, getTeamStats, joinTeam, getScrims, joinScrim, getScrimTeams, getMyApplications, getMyOffers, respondToOffer } from "@/lib/storage";
-import { Player, Team, Scrim, TeamApplication, TransferOffer } from "@/types";
+import { getCurrentPlayer, getCurrentTeam, signOut, getTeamById, getPlayerStats, getTeamStats, joinTeam, getScrims, joinScrim, getScrimTeams, getMyApplications, getMyOffers, respondToOffer, getTournamentsByTeamId, getTournamentTeamsByTeamId } from "@/lib/storage";
+import { Player, Team, Scrim, TeamApplication, TransferOffer, Tournament, TournamentTeam } from "@/types";
 import { Users, LogOut, Target, Trophy, Clock, BarChart3, Crosshair, TrendingUp, User as UserIcon, BarChart, ArrowRight, Calendar, Briefcase, Handshake, Lock, MessageSquare } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -37,6 +37,8 @@ const PlayerDashboard = () => {
   const [joinCode, setJoinCode] = useState("");
   const [isJoining, setIsJoining] = useState(false);
   const [scrims, setScrims] = useState<Scrim[]>([]);
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [myTournamentEntries, setMyTournamentEntries] = useState<TournamentTeam[]>([]);
   const [hasTeamProfile, setHasTeamProfile] = useState(false);
 
   // Transfer System
@@ -81,14 +83,18 @@ const PlayerDashboard = () => {
 
         if (currentPlayer.teamId) {
           try {
-            const [playerTeam, tStats, allScrims] = await Promise.all([
+            const [playerTeam, tStats, allScrims, teamTournaments, myEntries] = await Promise.all([
               getTeamById(currentPlayer.teamId),
               getTeamStats(currentPlayer.teamId),
-              getScrims()
+              getScrims(),
+              getTournamentsByTeamId(currentPlayer.teamId),
+              getTournamentTeamsByTeamId(currentPlayer.teamId)
             ]);
             setTeam(playerTeam || null);
             setTeamStats(tStats);
             setScrims(allScrims);
+            setTournaments(teamTournaments);
+            setMyTournamentEntries(myEntries);
           } catch (error) {
             console.error("Failed to load team data:", error);
           }
@@ -257,82 +263,14 @@ const PlayerDashboard = () => {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="scrims">Scrims</TabsTrigger>
+            <TabsTrigger value="tournaments" className="flex items-center gap-2">
+              <Trophy className="h-4 w-4" />
+              Tournaments
+            </TabsTrigger>
             <TabsTrigger value="transfers">Transfers</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="transfers" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* My Applications */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>My Applications</CardTitle>
-                  <CardDescription>Status of your applications to teams</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {applications.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">No active applications</div>
-                  ) : (
-                    <div className="space-y-4">
-                      {applications.map(app => (
-                        <div key={app.id} className="flex items-center justify-between p-3 bg-muted rounded-lg border">
-                          <div>
-                            <div className="font-semibold">{app.post?.team?.name || 'Unknown Team'}</div>
-                            <div className="text-xs text-muted-foreground">Role: {app.post?.role}</div>
-                          </div>
-                          <Badge variant={app.status === 'accepted' ? 'default' : app.status === 'rejected' ? 'destructive' : 'secondary'}>
-                            {app.status.toUpperCase()}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Incoming Offers */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Incoming Offers</CardTitle>
-                  <CardDescription>Teams that want you!</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {offers.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">No pending offers</div>
-                  ) : (
-                    <div className="space-y-4">
-                      {offers.map(offer => (
-                        <div key={offer.id} className="p-4 bg-muted rounded-lg border">
-                          <div className="flex items-center gap-3 mb-2">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={offer.team?.logoUrl} />
-                              <AvatarFallback>{offer.team?.name?.substring(0, 2)}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-bold">{offer.team?.name}</div>
-                              <div className="text-xs text-muted-foreground">{new Date(offer.createdAt).toLocaleDateString()}</div>
-                            </div>
-                          </div>
-                          <p className="text-sm italic text-muted-foreground mb-4">"{offer.message}"</p>
-                          <div className="flex gap-2">
-                            {offer.status === 'pending' ? (
-                              <>
-                                <Button size="sm" className="w-full" onClick={() => handleOfferResponse(offer.id, 'accepted')}>Accept</Button>
-                                <Button size="sm" variant="outline" className="w-full" onClick={() => handleOfferResponse(offer.id, 'rejected')}>Reject</Button>
-                              </>
-                            ) : (
-                              <Badge variant="outline" className="w-full justify-center">{offer.status.toUpperCase()}</Badge>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="overview">
+          <TabsContent value="overview" className="space-y-6">
             {/* Status Cards */}
             {isPending && (
               <Card className="mb-8 border-accent/50 bg-accent/5">
@@ -379,6 +317,7 @@ const PlayerDashboard = () => {
                 </CardContent>
               </Card>
             )}
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
               <Card>
                 <CardContent className="p-6">
@@ -434,29 +373,23 @@ const PlayerDashboard = () => {
               </Card>
             </div>
 
-            {/* Team Info */}
-            {
-              isApproved && team && (
-                <Card className="mb-8">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-4">
-                      <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
-                        <Trophy className="h-8 w-8 text-primary" />
-                      </div>
-                      <div>
-                        <Badge variant="secondary" className="mb-1">Team Member</Badge>
-                        <h2 className="text-2xl font-bold">{team.name}</h2>
-                        {team.country && <p className="text-sm text-muted-foreground">{team.country}</p>}
-                      </div>
+            {isApproved && team && (
+              <Card className="mb-8">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
+                      <Trophy className="h-8 w-8 text-primary" />
                     </div>
-                  </CardContent>
-                </Card>
-              )
-            }
+                    <div>
+                      <Badge variant="secondary" className="mb-1">Team Member</Badge>
+                      <h2 className="text-2xl font-bold">{team.name}</h2>
+                      {team.country && <p className="text-sm text-muted-foreground">{team.country}</p>}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-
-
-            {/* Kills Graph */}
             <Card>
               <CardHeader>
                 <CardTitle>Performance Trend</CardTitle>
@@ -517,13 +450,7 @@ const PlayerDashboard = () => {
                 ) : (
                   <div className="space-y-4">
                     {scrims.map((scrim) => {
-                      // Check if my team is in this scrim (we need to fetch this info or assume)
-                      // For now, we just show "Join" if IGL and "Manage" if joined (but we don't know if joined easily without fetching)
-                      // Let's rely on the user. If they click Join and are joined, it errors.
-                      // If they click Manage, they go to details.
-
                       const isIGL = player.role === 'IGL';
-
                       return (
                         <div key={scrim.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-muted rounded-lg border border-border">
                           <div className="flex items-center gap-4">
@@ -565,40 +492,181 @@ const PlayerDashboard = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
 
-            <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Join {joiningScrim?.name}</DialogTitle>
-                  <DialogDescription>Select a slot to join this scrim</DialogDescription>
-                </DialogHeader>
-                <div className="grid grid-cols-4 gap-2 py-4">
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map((slot) => {
-                    const isTaken = takenSlots.includes(slot);
-                    return (
-                      <Button
-                        key={slot}
-                        variant={selectedSlot === slot.toString() ? "default" : "outline"}
-                        disabled={isTaken}
-                        onClick={() => setSelectedSlot(slot.toString())}
-                        className={isTaken ? "opacity-50 cursor-not-allowed" : ""}
-                      >
-                        Slot {slot}
-                      </Button>
-                    );
-                  })}
-                </div>
-                <DialogFooter>
-                  <Button onClick={handleJoinScrim} disabled={!selectedSlot}>
-                    Confirm Join
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+          <TabsContent value="tournaments" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Team Tournaments</CardTitle>
+                <CardDescription>Track your team's tournament progress</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!player?.teamId ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Join a team to participate in tournaments</p>
+                  </div>
+                ) : tournaments.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Your team hasn't joined any tournaments yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {tournaments.map((t) => {
+                      const entry = myTournamentEntries.find(e => e.tournamentId === t.id);
+                      return (
+                        <div key={t.id} className="p-4 bg-muted rounded-lg border border-border">
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <Trophy className="h-6 w-6 text-primary" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-lg">{t.name}</h4>
+                                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {t.startDate ? new Date(t.startDate).toLocaleDateString() : 'Date TBD'}
+                                  </span>
+                                  <Badge variant={t.status === 'upcoming' ? 'secondary' : t.status === 'ongoing' ? 'destructive' : 'default'}>
+                                    {t.status.toUpperCase()}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+
+                            {entry && (
+                              <div className="grid grid-cols-3 gap-4 px-4 py-2 bg-background/50 rounded-md border text-center">
+                                <div>
+                                  <p className="text-[10px] uppercase text-muted-foreground font-bold leading-tight">Points</p>
+                                  <p className="text-lg font-bold text-primary">{entry.totalPoints}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] uppercase text-muted-foreground font-bold leading-tight">Wins</p>
+                                  <p className="text-lg font-bold">{entry.wins}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] uppercase text-muted-foreground font-bold leading-tight">Kills</p>
+                                  <p className="text-lg font-bold">{entry.kills}</p>
+                                </div>
+                              </div>
+                            )}
+
+                            <Button variant="outline" size="sm" onClick={() => navigate(`/rankings`)}>
+                              View Standings
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="transfers" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>My Applications</CardTitle>
+                  <CardDescription>Status of your applications to teams</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {applications.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">No active applications</div>
+                  ) : (
+                    <div className="space-y-4">
+                      {applications.map(app => (
+                        <div key={app.id} className="flex items-center justify-between p-3 bg-muted rounded-lg border">
+                          <div>
+                            <div className="font-semibold">{app.post?.team?.name || 'Unknown Team'}</div>
+                            <div className="text-xs text-muted-foreground">Role: {app.post?.role}</div>
+                          </div>
+                          <Badge variant={app.status === 'accepted' ? 'default' : app.status === 'rejected' ? 'destructive' : 'secondary'}>
+                            {app.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Incoming Offers</CardTitle>
+                  <CardDescription>Teams that want you!</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {offers.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">No pending offers</div>
+                  ) : (
+                    <div className="space-y-4">
+                      {offers.map(offer => (
+                        <div key={offer.id} className="p-4 bg-muted rounded-lg border">
+                          <div className="flex items-center gap-3 mb-2">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={offer.team?.logoUrl} />
+                              <AvatarFallback>{offer.team?.name?.substring(0, 2)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-bold">{offer.team?.name}</div>
+                              <div className="text-xs text-muted-foreground">{new Date(offer.createdAt).toLocaleDateString()}</div>
+                            </div>
+                          </div>
+                          <p className="text-sm italic text-muted-foreground mb-4">"{offer.message}"</p>
+                          <div className="flex gap-2">
+                            {offer.status === 'pending' ? (
+                              <>
+                                <Button size="sm" className="w-full" onClick={() => handleOfferResponse(offer.id, 'accepted')}>Accept</Button>
+                                <Button size="sm" variant="outline" className="w-full" onClick={() => handleOfferResponse(offer.id, 'rejected')}>Reject</Button>
+                              </>
+                            ) : (
+                              <Badge variant="outline" className="w-full justify-center">{offer.status.toUpperCase()}</Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
-      </main >
-    </div >
+      </main>
+      <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Join {joiningScrim?.name}</DialogTitle>
+            <DialogDescription>Select a slot to join this scrim</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-4 gap-2 py-4">
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((slot) => {
+              const isTaken = takenSlots.includes(slot);
+              return (
+                <Button
+                  key={slot}
+                  variant={selectedSlot === slot.toString() ? "default" : "outline"}
+                  disabled={isTaken}
+                  onClick={() => setSelectedSlot(slot.toString())}
+                  className={isTaken ? "opacity-50 cursor-not-allowed" : ""}
+                >
+                  Slot {slot}
+                </Button>
+              );
+            })}
+          </div>
+          <DialogFooter>
+            <Button onClick={handleJoinScrim} disabled={!selectedSlot}>
+              Confirm Join
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 

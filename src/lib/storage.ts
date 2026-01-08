@@ -1,4 +1,4 @@
-import { Team, Player, JoinRequest, Scrim, Match, MatchTeamStats, MatchPlayerStats, ScrimTeam, Feedback } from '@/types';
+import { Team, Player, JoinRequest, Scrim, Match, MatchTeamStats, MatchPlayerStats, ScrimTeam, Feedback, Tournament, TournamentRound, TournamentGroup, TournamentTeam } from '@/types';
 import { supabase } from './supabase';
 
 // Helper to map Supabase response to our types (handling snake_case to camelCase if needed)
@@ -899,6 +899,15 @@ export const getAdmin = async (id: string) => {
     if (error.code === 'PGRST116') return null;
     return null;
   }
+  return data;
+};
+
+export const getAdmins = async () => {
+  const { data, error } = await supabase
+    .from('admins')
+    .select('*');
+
+  if (error) throw error;
   return data;
 };
 
@@ -1942,4 +1951,209 @@ export const fixUsernameSpaces = async (): Promise<number> => {
   }
 
   return count;
+};
+
+// Tournaments
+export const getTournaments = async (): Promise<Tournament[]> => {
+  const { data, error } = await supabase.from('tournaments').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data.map((t: any) => ({
+    ...t,
+    maxTeams: t.max_teams,
+    currentTeams: t.current_teams,
+    startDate: t.start_date,
+    endDate: t.end_date,
+    createdAt: t.created_at
+  }));
+};
+
+export const saveTournament = async (tournament: Tournament): Promise<void> => {
+  const { error } = await supabase.from('tournaments').insert({
+    id: tournament.id,
+    name: tournament.name,
+    status: tournament.status,
+    max_teams: tournament.maxTeams,
+    current_teams: tournament.currentTeams,
+    start_date: tournament.startDate,
+    end_date: tournament.endDate,
+    created_at: tournament.createdAt
+  });
+  if (error) throw error;
+};
+
+export const deleteTournament = async (id: string): Promise<void> => {
+  // Simple delete for now - in production should cascade
+  const { error } = await supabase.from('tournaments').delete().eq('id', id);
+  if (error) throw error;
+};
+
+// Tournament Rounds
+export const getTournamentRounds = async (tournamentId: string): Promise<TournamentRound[]> => {
+  const { data, error } = await supabase
+    .from('tournament_rounds')
+    .select('*')
+    .eq('tournament_id', tournamentId)
+    .order('round_order', { ascending: true });
+
+  if (error) throw error;
+  return data.map((r: any) => ({
+    ...r,
+    tournamentId: r.tournament_id,
+    roundOrder: r.round_order,
+    createdAt: r.created_at
+  }));
+};
+
+export const saveTournamentRound = async (round: TournamentRound): Promise<void> => {
+  const { error } = await supabase.from('tournament_rounds').insert({
+    id: round.id,
+    tournament_id: round.tournamentId,
+    name: round.name,
+    round_order: round.roundOrder,
+    status: round.status,
+    created_at: round.createdAt
+  });
+  if (error) throw error;
+};
+
+// Tournament Groups
+export const getTournamentGroups = async (roundId: string): Promise<TournamentGroup[]> => {
+  const { data, error } = await supabase
+    .from('tournament_groups')
+    .select('*')
+    .eq('round_id', roundId);
+
+  if (error) throw error;
+  return data.map((g: any) => ({
+    ...g,
+    roundId: g.round_id,
+    createdAt: g.created_at
+  }));
+};
+
+export const saveTournamentGroup = async (group: TournamentGroup): Promise<void> => {
+  const { error } = await supabase.from('tournament_groups').insert({
+    id: group.id,
+    round_id: group.roundId,
+    name: group.name,
+    status: group.status,
+    created_at: group.createdAt
+  });
+  if (error) throw error;
+};
+
+// Tournament Teams
+export const getTournamentTeams = async (groupId: string): Promise<TournamentTeam[]> => {
+  const { data, error } = await supabase
+    .from('tournament_teams')
+    .select('*')
+    .eq('group_id', groupId)
+    .order('total_points', { ascending: false });
+
+  if (error) throw error;
+  return data.map((t: any) => ({
+    ...t,
+    tournamentId: t.tournament_id,
+    roundId: t.round_id,
+    groupId: t.group_id,
+    teamId: t.team_id,
+    teamName: t.team_name,
+    matchesPlayed: t.matches_played,
+    totalPoints: t.total_points,
+    joinedAt: t.joined_at
+  }));
+};
+
+export const getTournamentTeamsByTournamentId = async (tournamentId: string): Promise<TournamentTeam[]> => {
+  const { data, error } = await supabase
+    .from('tournament_teams')
+    .select('*')
+    .eq('tournament_id', tournamentId);
+
+  if (error) throw error;
+  return data.map((t: any) => ({
+    ...t,
+    tournamentId: t.tournament_id,
+    roundId: t.round_id,
+    groupId: t.group_id,
+    teamId: t.team_id,
+    teamName: t.team_name,
+    matchesPlayed: t.matches_played,
+    totalPoints: t.total_points,
+    joinedAt: t.joined_at
+  }));
+};
+
+export const addTournamentTeam = async (entry: TournamentTeam): Promise<void> => {
+  const { error } = await supabase.from('tournament_teams').insert({
+    id: entry.id,
+    tournament_id: entry.tournamentId,
+    round_id: entry.roundId,
+    group_id: entry.groupId,
+    team_id: entry.teamId,
+    team_name: entry.teamName,
+    matches_played: entry.matchesPlayed,
+    total_points: entry.totalPoints,
+    wins: entry.wins,
+    kills: entry.kills,
+    joined_at: entry.joinedAt
+  });
+  if (error) throw error;
+};
+
+export const deleteTournamentTeam = async (id: string): Promise<void> => {
+  const { error } = await supabase.from('tournament_teams').delete().eq('id', id);
+  if (error) throw error;
+};
+
+export const getTournamentTeamsByTeamId = async (teamId: string): Promise<TournamentTeam[]> => {
+  const { data, error } = await supabase
+    .from('tournament_teams')
+    .select('*')
+    .eq('team_id', teamId);
+
+  if (error) throw error;
+  return data.map((t: any) => ({
+    ...t,
+    tournamentId: t.tournament_id,
+    roundId: t.round_id,
+    groupId: t.group_id,
+    teamId: t.team_id,
+    teamName: t.team_name,
+    matchesPlayed: t.matches_played,
+    totalPoints: t.total_points,
+    joinedAt: t.joined_at
+  }));
+};
+
+export const getTournamentsByTeamId = async (teamId: string): Promise<Tournament[]> => {
+  // This requires a join or two-step query.
+  // Find all tournament_teams for this teamId
+  const { data: entries, error: entryError } = await supabase
+    .from('tournament_teams')
+    .select('tournament_id')
+    .eq('team_id', teamId);
+
+  if (entryError) throw entryError;
+
+  if (!entries || entries.length === 0) return [];
+
+  const tournamentIds = [...new Set(entries.map((e: any) => e.tournament_id))];
+
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('*')
+    .in('id', tournamentIds)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return data.map((t: any) => ({
+    ...t,
+    maxTeams: t.max_teams,
+    currentTeams: t.current_teams,
+    startDate: t.start_date,
+    endDate: t.end_date,
+    createdAt: t.created_at
+  }));
 };

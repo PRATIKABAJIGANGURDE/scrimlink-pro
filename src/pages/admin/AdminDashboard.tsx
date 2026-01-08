@@ -27,10 +27,21 @@ import {
     getFeedback,
     getAllPlayerStats,
     getAllTeamStats,
-    deleteScrim
+    deleteScrim,
+    getTournaments,
+    saveTournament,
+    deleteTournament,
+    getTournamentRounds,
+    saveTournamentRound,
+    getTournamentGroups,
+    saveTournamentGroup,
+    getTournamentTeams,
+    getTournamentTeamsByTournamentId,
+    addTournamentTeam,
+    deleteTournamentTeam
 } from "@/lib/storage";
-import { Scrim, Match, Team, Player, Feedback } from "@/types";
-import { Shield, LogOut, Plus, Target, Calendar, Trophy, BarChart, Users, User, AlertTriangle, MessageCircle, Activity, Trash2 } from "lucide-react";
+import { Scrim, Match, Team, Player, Feedback, Tournament, TournamentRound, TournamentGroup, TournamentTeam } from "@/types";
+import { Shield, LogOut, Plus, Target, Calendar, Trophy, BarChart, Users, User, AlertTriangle, MessageCircle, Activity, Trash2, Medal } from "lucide-react";
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
 import {
     AlertDialog,
@@ -63,6 +74,15 @@ const AdminDashboard = () => {
     const [feedback, setFeedback] = useState<Feedback[]>([]);
     const [allPlayerStats, setAllPlayerStats] = useState<any[]>([]);
     const [allTeamStats, setAllTeamStats] = useState<any[]>([]);
+    const [tournaments, setTournaments] = useState<Tournament[]>([]);
+    const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
+    const [tournamentRounds, setTournamentRounds] = useState<TournamentRound[]>([]);
+    const [tournamentGroups, setTournamentGroups] = useState<TournamentGroup[]>([]);
+    const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>([]);
+    const [availableTeams, setAvailableTeams] = useState<Team[]>([]);
+    const [isCreateTournamentOpen, setIsCreateTournamentOpen] = useState(false);
+
+    // Create Scrim State
     const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
     const [isCreateScrimOpen, setIsCreateScrimOpen] = useState(false);
     const [creatingScrim, setCreatingScrim] = useState(false);
@@ -122,7 +142,8 @@ const AdminDashboard = () => {
                 getAllRecruitmentPostsForAdmin(),
                 getFeedback(),
                 getAllPlayerStats(),
-                getAllTeamStats()
+                getAllTeamStats(),
+                getTournaments()
             ]);
 
             const allScrims = results[0];
@@ -134,9 +155,11 @@ const AdminDashboard = () => {
             const allFeedback = results[6];
             const allPlayerStatsData = results[7];
             const allTeamStatsData = results[8];
+            const allTournaments = results[9];
 
             setScrims(allScrims);
             setTeams(allTeams);
+            setAvailableTeams(allTeams); // Initialize available teams
             setPlayers(allPlayers);
             setReports(allReports.data);
             setTransfers(allTransfers);
@@ -144,6 +167,7 @@ const AdminDashboard = () => {
             setFeedback(allFeedback);
             setAllPlayerStats(allPlayerStatsData);
             setAllTeamStats(allTeamStatsData);
+            setTournaments(allTournaments);
         } catch (error) {
             console.error("Failed to load data:", error);
             toast({
@@ -151,8 +175,43 @@ const AdminDashboard = () => {
                 description: "Failed to load dashboard data",
                 variant: "destructive"
             });
+        } finally {
+            setLoading(false);
         }
     };
+
+    const loadTournamentDetails = async (tournamentId: string) => {
+        try {
+            const rounds = await getTournamentRounds(tournamentId);
+            setTournamentRounds(rounds);
+
+            // Fetch groups for all rounds
+            const allGroups: TournamentGroup[] = [];
+            for (const round of rounds) {
+                const groups = await getTournamentGroups(round.id);
+                allGroups.push(...groups);
+            }
+            setTournamentGroups(allGroups);
+
+            // Fetch tournament teams
+            const teams = await getTournamentTeamsByTournamentId(tournamentId);
+            setTournamentTeams(teams);
+
+        } catch (error) {
+            console.error("Failed to load tournament details:", error);
+            toast({ title: "Error", description: "Failed to load tournament details" });
+        }
+    };
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    useEffect(() => {
+        if (selectedTournament) {
+            loadTournamentDetails(selectedTournament.id);
+        }
+    }, [selectedTournament]);
 
     const handleCreateScrim = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -270,6 +329,140 @@ const AdminDashboard = () => {
         }
     };
 
+    const [newTournament, setNewTournament] = useState({ name: "", maxTeams: 12, startDate: "", endDate: "" });
+
+    const handleCreateTournament = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const tournament: Tournament = {
+                id: generateId(),
+                name: newTournament.name,
+                maxTeams: newTournament.maxTeams,
+                currentTeams: 0,
+                status: 'upcoming',
+                startDate: newTournament.startDate,
+                endDate: newTournament.endDate,
+                createdAt: new Date().toISOString()
+            };
+            await saveTournament(tournament);
+            toast({ title: "Success", description: "Tournament created successfully" });
+            setIsCreateTournamentOpen(false);
+            setNewTournament({ name: "", maxTeams: 12, startDate: "", endDate: "" });
+            loadData();
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message, variant: "destructive" });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const [newRoundName, setNewRoundName] = useState("");
+
+    const handleAddRound = async () => {
+        if (!selectedTournament || !newRoundName) return;
+        try {
+            const round: TournamentRound = {
+                id: generateId(),
+                tournamentId: selectedTournament.id,
+                name: newRoundName,
+                roundOrder: tournamentRounds.length + 1,
+                status: 'upcoming',
+                createdAt: new Date().toISOString()
+            };
+            await saveTournamentRound(round);
+            setNewRoundName("");
+            loadTournamentDetails(selectedTournament.id);
+            toast({ title: "Success", description: "Round added" });
+        } catch (error) {
+            console.error(error);
+            toast({ title: "Error", description: "Failed to add round" });
+        }
+    };
+
+    const [newGroupName, setNewGroupName] = useState("");
+    const [addingGroupToRound, setAddingGroupToRound] = useState<string | null>(null);
+
+    const handleAddGroup = async (roundId: string) => {
+        if (!newGroupName) return;
+        try {
+            const group: TournamentGroup = {
+                id: generateId(),
+                roundId: roundId,
+                name: newGroupName,
+                status: 'upcoming',
+                createdAt: new Date().toISOString()
+            };
+            await saveTournamentGroup(group);
+            setNewGroupName("");
+            setAddingGroupToRound(null);
+            loadTournamentDetails(selectedTournament!.id);
+            toast({ title: "Success", description: "Group added" });
+        } catch (error) {
+            console.error(error);
+            toast({ title: "Error", description: "Failed to add group" });
+        }
+    };
+
+    const [selectedTeamToAssign, setSelectedTeamToAssign] = useState<string>("");
+    const [selectedGroupToAssign, setSelectedGroupToAssign] = useState<string>("");
+
+    const handleAssignTeam = async () => {
+        if (!selectedTournament || !selectedTeamToAssign || !selectedGroupToAssign) return;
+
+        const team = teams.find(t => t.id === selectedTeamToAssign);
+        const group = tournamentGroups.find(g => g.id === selectedGroupToAssign);
+        const round = tournamentRounds.find(r => r.id === group?.roundId);
+
+        if (!team || !group || !round) {
+            toast({ title: "Error", description: "Missing team, group, or round information" });
+            return;
+        }
+
+        const isAlreadyAssigned = tournamentTeams.some(tt => tt.teamId === team.id);
+        if (isAlreadyAssigned) {
+            toast({ title: "Already Assigned", description: `${team.name} is already in this tournament.`, variant: "destructive" });
+            return;
+        }
+
+        try {
+            const tournamentTeam: TournamentTeam = {
+                id: generateId(),
+                tournamentId: selectedTournament.id,
+                roundId: round.id,
+                groupId: group.id,
+                teamId: team.id,
+                teamName: team.name,
+                matchesPlayed: 0,
+                totalPoints: 0,
+                wins: 0,
+                kills: 0,
+                joinedAt: new Date().toISOString()
+            };
+
+            await addTournamentTeam(tournamentTeam);
+            setSelectedTeamToAssign("");
+            loadTournamentDetails(selectedTournament.id);
+            toast({ title: "Success", description: `Added ${team.name} to ${group.name}` });
+        } catch (error) {
+            console.error(error);
+            toast({ title: "Error", description: "Failed to assign team" });
+        }
+    };
+
+    const handleRemoveTeam = async (entryId: string) => {
+        try {
+            await deleteTournamentTeam(entryId);
+            if (selectedTournament) {
+                loadTournamentDetails(selectedTournament.id);
+            }
+            toast({ title: "Success", description: "Team removed from tournament" });
+        } catch (error) {
+            console.error(error);
+            toast({ title: "Error", description: "Failed to remove team" });
+        }
+    };
+
     const handleDeleteScrim = async (scrimId: string) => {
         if (!window.confirm("Are you sure you want to delete this scrim? This action cannot be undone.")) return;
 
@@ -333,459 +526,884 @@ const AdminDashboard = () => {
                 </AlertDialog>
             </ResponsiveNavbar>
 
-            <main className="container mx-auto px-4 pt-32 pb-8">
-                <Tabs defaultValue="overview" className="space-y-4">
-                    <TabsList>
-                        <TabsTrigger value="overview" className="flex items-center gap-2">
-                            <Activity className="h-4 w-4" />
-                            Overview
-                        </TabsTrigger>
-                        <TabsTrigger value="scrims">Scrims</TabsTrigger>
-                        <TabsTrigger value="users">User Management</TabsTrigger>
-                        <TabsTrigger value="teams">Teams</TabsTrigger>
-                        <TabsTrigger value="players">Players</TabsTrigger>
-                        <TabsTrigger value="reports" className="flex items-center gap-2">
-                            <AlertTriangle className="h-4 w-4" />
-                            Reports
-                        </TabsTrigger>
-                        <TabsTrigger value="recruitment">Recruitment</TabsTrigger>
-                        <TabsTrigger value="transfers">Transfers</TabsTrigger>
-                        <TabsTrigger value="feedback" className="flex items-center gap-2">
-                            <MessageCircle className="h-4 w-4" />
-                            Feedback
-                        </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="overview" className="space-y-4">
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">
-                                        Total Players
-                                    </CardTitle>
-                                    <User className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">{players.length}</div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Registered players
-                                    </p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">
-                                        Total Teams
-                                    </CardTitle>
-                                    <Users className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">{teams.length}</div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Registered teams
-                                    </p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">
-                                        Active Scrims (Today)
-                                    </CardTitle>
-                                    <Target className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">
-                                        {scrims.filter(s => {
-                                            const scrimDate = new Date(s.startTime || "");
-                                            const today = new Date();
-                                            return scrimDate.getDate() === today.getDate() &&
-                                                scrimDate.getMonth() === today.getMonth() &&
-                                                scrimDate.getFullYear() === today.getFullYear();
-                                        }).length}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Scheduled for today
-                                    </p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">
-                                        Pending Reports
-                                    </CardTitle>
-                                    <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">{reports.length}</div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Recent reports
-                                    </p>
-                                </CardContent>
-                            </Card>
+            {selectedTournament ? (
+                <main className="container mx-auto px-4 pt-32 pb-8">
+                    <div className="flex items-center gap-4 mb-8">
+                        <Button variant="outline" size="icon" onClick={() => setSelectedTournament(null)}>
+                            <LogOut className="h-4 w-4 rotate-180" />
+                        </Button>
+                        <div>
+                            <h1 className="text-3xl font-bold">{selectedTournament.name}</h1>
+                            <p className="text-muted-foreground">Manage rounds, groups, and teams</p>
                         </div>
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                            <Card className="col-span-4">
+                    </div>
+
+                    <Tabs defaultValue="structure" className="space-y-4">
+                        <TabsList>
+                            <TabsTrigger value="structure">Structure</TabsTrigger>
+                            <TabsTrigger value="teams">Teams</TabsTrigger>
+                            <TabsTrigger value="standings">Standings</TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="structure" className="space-y-4">
+                            <Card>
                                 <CardHeader>
-                                    <CardTitle>Role Distribution</CardTitle>
-                                    <CardDescription>Breakdown of player roles across the platform</CardDescription>
+                                    <CardTitle>Tournament Rounds</CardTitle>
+                                    <CardDescription>Define the stages of your tournament</CardDescription>
                                 </CardHeader>
-                                <CardContent className="pl-2">
-                                    <div className="h-[350px]">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie
-                                                    data={Object.entries(players.reduce((acc: any, player) => {
-                                                        const role = player.role || "Unassigned";
-                                                        acc[role] = (acc[role] || 0) + 1;
-                                                        return acc;
-                                                    }, {})).map(([name, value]) => ({ name, value }))}
-                                                    cx="50%"
-                                                    cy="50%"
-                                                    labelLine={false}
-                                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                                    outerRadius={120}
-                                                    fill="#8884d8"
-                                                    dataKey="value"
-                                                >
-                                                    {Object.entries(players.reduce((acc: any, player) => {
-                                                        const role = player.role || "Unassigned";
-                                                        acc[role] = (acc[role] || 0) + 1;
-                                                        return acc;
-                                                    }, {})).map((entry: any, index: number) => {
-                                                        const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#FF6384'];
-                                                        return <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />;
-                                                    })}
-                                                </Pie>
-                                                <Tooltip />
-                                                <Legend />
-                                            </PieChart>
-                                        </ResponsiveContainer>
+                                <CardContent className="space-y-6">
+                                    <div className="flex gap-2">
+                                        <Input
+                                            placeholder="Round Name (e.g., Qualifiers, Finals)"
+                                            value={newRoundName}
+                                            onChange={(e) => setNewRoundName(e.target.value)}
+                                        />
+                                        <Button onClick={handleAddRound}>Add Round</Button>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        {tournamentRounds.sort((a, b) => a.roundOrder - b.roundOrder).map((round) => (
+                                            <Card key={round.id} className="border-muted bg-muted/20">
+                                                <CardHeader className="py-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <CardTitle className="text-lg font-medium">{round.name}</CardTitle>
+                                                        <Badge>{round.status}</Badge>
+                                                    </div>
+                                                </CardHeader>
+                                                <CardContent className="py-4 pt-0">
+                                                    <div className="space-y-2">
+                                                        <h4 className="text-sm font-semibold text-muted-foreground">Groups</h4>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                                            {tournamentGroups.filter(g => g.roundId === round.id).map(group => (
+                                                                <div key={group.id} className="p-2 bg-background border rounded-md flex items-center justify-between">
+                                                                    <span>{group.name}</span>
+                                                                    <Badge variant="outline">{group.status}</Badge>
+                                                                </div>
+                                                            ))}
+
+                                                            {addingGroupToRound === round.id ? (
+                                                                <div className="flex gap-2 items-center p-2 bg-background border rounded-md border-primary/50">
+                                                                    <Input
+                                                                        className="h-8"
+                                                                        placeholder="Group Name"
+                                                                        value={newGroupName}
+                                                                        onChange={(e) => setNewGroupName(e.target.value)}
+                                                                        autoFocus
+                                                                    />
+                                                                    <Button size="sm" onClick={() => handleAddGroup(round.id)}>Add</Button>
+                                                                    <Button size="sm" variant="ghost" onClick={() => setAddingGroupToRound(null)}>Cancel</Button>
+                                                                </div>
+                                                            ) : (
+                                                                <Button
+                                                                    variant="outline"
+                                                                    className="w-full border-dashed"
+                                                                    onClick={() => {
+                                                                        setAddingGroupToRound(round.id);
+                                                                        setNewGroupName("Group " + String.fromCharCode(65 + tournamentGroups.filter(g => g.roundId === round.id).length));
+                                                                    }}
+                                                                >
+                                                                    <Plus className="h-3 w-3 mr-2" /> Add Group
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        ))}
                                     </div>
                                 </CardContent>
                             </Card>
+                        </TabsContent>
 
-                            <div className="col-span-3 grid gap-4">
+                        <TabsContent value="teams" className="space-y-4">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Team Assignment</CardTitle>
+                                    <CardDescription>Add teams to groups</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                                        <div className="space-y-2">
+                                            <Label>Select Team</Label>
+                                            <Select value={selectedTeamToAssign} onValueChange={setSelectedTeamToAssign}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Choose a team" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {availableTeams.filter(t => !tournamentTeams.some(tt => tt.teamId === t.id)).map(team => (
+                                                        <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Select Group</Label>
+                                            <Select value={selectedGroupToAssign} onValueChange={setSelectedGroupToAssign}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Choose a group" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {tournamentRounds.map(round => (
+                                                        <div key={round.id}>
+                                                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">{round.name}</div>
+                                                            {tournamentGroups.filter(g => g.roundId === round.id).map(group => (
+                                                                <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
+                                                            ))}
+                                                        </div>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <Button onClick={handleAssignTeam} disabled={!selectedTeamToAssign || !selectedGroupToAssign}>
+                                            Assign Team
+                                        </Button>
+                                    </div>
+
+                                    <div className="mt-8 space-y-6">
+                                        {tournamentRounds.map(round => (
+                                            <div key={round.id} className="space-y-4">
+                                                <h3 className="text-lg font-semibold border-b pb-1">{round.name}</h3>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                    {tournamentGroups.filter(g => g.roundId === round.id).map(group => (
+                                                        <Card key={group.id} className="bg-muted/10">
+                                                            <CardHeader className="py-3 bg-muted/20">
+                                                                <CardTitle className="text-sm">{group.name}</CardTitle>
+                                                            </CardHeader>
+                                                            <CardContent className="py-3">
+                                                                <div className="space-y-1">
+                                                                    {tournamentTeams.filter(tt => tt.groupId === group.id).length === 0 ? (
+                                                                        <p className="text-xs text-muted-foreground italic">No teams assigned</p>
+                                                                    ) : (
+                                                                        tournamentTeams.filter(tt => tt.groupId === group.id).map(tt => (
+                                                                            <div key={tt.id} className="text-sm py-1 flex justify-between items-center group">
+                                                                                <span>{tt.teamName}</span>
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                    onClick={() => handleRemoveTeam(tt.id)}
+                                                                                >
+                                                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                                                </Button>
+                                                                            </div>
+                                                                        ))
+                                                                    )}
+                                                                </div>
+                                                            </CardContent>
+                                                        </Card>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
+                        <TabsContent value="standings" className="space-y-4">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Standings & Progress</CardTitle>
+                                    <CardDescription>Track team performance across rounds</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-8">
+                                    {tournamentRounds.map(round => (
+                                        <div key={round.id} className="space-y-4">
+                                            <h3 className="text-xl font-bold flex items-center gap-2">
+                                                <Target className="h-5 w-5 text-primary" />
+                                                {round.name}
+                                            </h3>
+                                            <div className="space-y-6">
+                                                {tournamentGroups.filter(g => g.roundId === round.id).map(group => (
+                                                    <div key={group.id} className="space-y-2">
+                                                        <h4 className="text-sm font-semibold text-muted-foreground px-1">{group.name} Leaderboard</h4>
+                                                        <Table>
+                                                            <TableHeader>
+                                                                <TableRow>
+                                                                    <TableHead className="w-[50px]">Pos</TableHead>
+                                                                    <TableHead>Team</TableHead>
+                                                                    <TableHead className="text-right">MP</TableHead>
+                                                                    <TableHead className="text-right">Kills</TableHead>
+                                                                    <TableHead className="text-right">Wins</TableHead>
+                                                                    <TableHead className="text-right font-bold">Points</TableHead>
+                                                                </TableRow>
+                                                            </TableHeader>
+                                                            <TableBody>
+                                                                {tournamentTeams
+                                                                    .filter(tt => tt.groupId === group.id)
+                                                                    .sort((a, b) => b.totalPoints - a.totalPoints)
+                                                                    .map((tt, index) => (
+                                                                        <TableRow key={tt.id}>
+                                                                            <TableCell className="font-medium">{index + 1}</TableCell>
+                                                                            <TableCell>{tt.teamName}</TableCell>
+                                                                            <TableCell className="text-right">{tt.matchesPlayed}</TableCell>
+                                                                            <TableCell className="text-right">{tt.kills}</TableCell>
+                                                                            <TableCell className="text-right">{tt.wins}</TableCell>
+                                                                            <TableCell className="text-right font-bold">{tt.totalPoints}</TableCell>
+                                                                        </TableRow>
+                                                                    ))}
+                                                                {tournamentTeams.filter(tt => tt.groupId === group.id).length === 0 && (
+                                                                    <TableRow>
+                                                                        <TableCell colSpan={6} className="text-center py-4 text-muted-foreground italic">
+                                                                            No teams assigned to this group yet
+                                                                        </TableCell>
+                                                                    </TableRow>
+                                                                )}
+                                                            </TableBody>
+                                                        </Table>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                    </Tabs>
+                </main>
+            ) : (
+                <main className="container mx-auto px-4 pt-32 pb-8">
+                    <Tabs defaultValue="overview" className="space-y-4">
+                        <TabsList>
+                            <TabsTrigger value="tournaments" className="flex items-center gap-2">
+                                <Medal className="h-4 w-4" />
+                                Tournaments
+                            </TabsTrigger>
+                            <TabsTrigger value="overview" className="flex items-center gap-2">
+                                <Activity className="h-4 w-4" />
+                                Overview
+                            </TabsTrigger>
+                            <TabsTrigger value="scrims">Scrims</TabsTrigger>
+                            <TabsTrigger value="users">User Management</TabsTrigger>
+                            <TabsTrigger value="teams">Teams</TabsTrigger>
+                            <TabsTrigger value="players">Players</TabsTrigger>
+                            <TabsTrigger value="reports" className="flex items-center gap-2">
+                                <AlertTriangle className="h-4 w-4" />
+                                Reports
+                            </TabsTrigger>
+                            <TabsTrigger value="recruitment">Recruitment</TabsTrigger>
+                            <TabsTrigger value="transfers">Transfers</TabsTrigger>
+                            <TabsTrigger value="feedback" className="flex items-center gap-2">
+                                <MessageCircle className="h-4 w-4" />
+                                Feedback
+                            </TabsTrigger>
+                        </TabsList>
+
+
+                        <TabsContent value="tournaments" className="space-y-4">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <div>
+                                        <CardTitle>Tournaments</CardTitle>
+                                        <CardDescription>Manage your tournaments</CardDescription>
+                                    </div>
+                                    <Dialog open={isCreateTournamentOpen} onOpenChange={setIsCreateTournamentOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button>
+                                                <Plus className="h-4 w-4 mr-2" />
+                                                Create Tournament
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Create New Tournament</DialogTitle>
+                                                <DialogDescription>Set up a new competitive event</DialogDescription>
+                                            </DialogHeader>
+                                            <form onSubmit={handleCreateTournament} className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="tName">Tournament Name</Label>
+                                                    <Input
+                                                        id="tName"
+                                                        placeholder="e.g. Winter Championship"
+                                                        value={newTournament.name}
+                                                        onChange={(e) => setNewTournament({ ...newTournament, name: e.target.value })}
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="tMaxTeams">Max Teams</Label>
+                                                    <Input
+                                                        id="tMaxTeams"
+                                                        type="number"
+                                                        value={newTournament.maxTeams}
+                                                        onChange={(e) => setNewTournament({ ...newTournament, maxTeams: parseInt(e.target.value) || 0 })}
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="tStartDate">Start Date</Label>
+                                                        <Input
+                                                            id="tStartDate"
+                                                            type="date"
+                                                            value={newTournament.startDate}
+                                                            onChange={(e) => setNewTournament({ ...newTournament, startDate: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="tEndDate">End Date</Label>
+                                                        <Input
+                                                            id="tEndDate"
+                                                            type="date"
+                                                            value={newTournament.endDate}
+                                                            onChange={(e) => setNewTournament({ ...newTournament, endDate: e.target.value })}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <DialogFooter>
+                                                    <Button type="submit" disabled={loading}>
+                                                        {loading ? "Creating..." : "Create Tournament"}
+                                                    </Button>
+                                                </DialogFooter>
+                                            </form>
+                                        </DialogContent>
+                                    </Dialog>
+                                </CardHeader>
+                                <CardContent>
+                                    {tournaments.length === 0 ? (
+                                        <div className="text-center py-12 text-muted-foreground">
+                                            <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                            <p>No tournaments found</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {tournaments.map((t) => (
+                                                <div key={t.id} className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                                                            <Trophy className="h-6 w-6 text-primary" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-semibold text-lg">{t.name}</h4>
+                                                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                                                <span className="flex items-center gap-1">
+                                                                    <Calendar className="h-3 w-3" />
+                                                                    {t.startDate ? `${new Date(t.startDate).toLocaleDateString()}` : 'Date TBD'}
+                                                                </span>
+                                                                <span>{t.currentTeams}/{t.maxTeams} Teams</span>
+                                                                <Badge variant={t.status === 'upcoming' ? 'secondary' : t.status === 'ongoing' ? 'destructive' : 'default'}>
+                                                                    {t.status.toUpperCase()}
+                                                                </Badge>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <Button variant="outline" onClick={() => setSelectedTournament(t)}>
+                                                            Manage
+                                                        </Button>
+                                                        <Button variant="destructive" size="icon" onClick={() => {
+                                                            if (window.confirm("Delete tournament?")) {
+                                                                deleteTournament(t.id).then(() => {
+                                                                    setTournaments(tournaments.filter(tr => tr.id !== t.id));
+                                                                    toast({ title: "Deleted", description: "Tournament removed" });
+                                                                });
+                                                            }
+                                                        }}>
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
+                        <TabsContent value="overview" className="space-y-4">
+                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                                 <Card>
-                                    <CardHeader>
-                                        <CardTitle>Top Players</CardTitle>
-                                        <CardDescription>Highest kills across all matches</CardDescription>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">
+                                            Total Players
+                                        </CardTitle>
+                                        <User className="h-4 w-4 text-muted-foreground" />
                                     </CardHeader>
                                     <CardContent>
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Player</TableHead>
-                                                    <TableHead className="text-right">Kills</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {Object.entries(allPlayerStats.reduce((acc: any, stat) => {
-                                                    const pKey = stat.player?.username || stat.player_id;
-                                                    if (!acc[pKey]) acc[pKey] = { name: stat.player?.in_game_name || stat.player?.username || "Unknown", kills: 0 };
-                                                    acc[pKey].kills += stat.kills;
-                                                    return acc;
-                                                }, {}))
-                                                    .sort(([, a]: any, [, b]: any) => b.kills - a.kills)
-                                                    .slice(0, 5)
-                                                    .map(([key, data]: any) => (
-                                                        <TableRow key={key}>
-                                                            <TableCell className="font-medium">{data.name}</TableCell>
-                                                            <TableCell className="text-right font-bold">{data.kills}</TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                            </TableBody>
-                                        </Table>
+                                        <div className="text-2xl font-bold">{players.length}</div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Registered players
+                                        </p>
                                     </CardContent>
                                 </Card>
                                 <Card>
-                                    <CardHeader>
-                                        <CardTitle>Top Teams</CardTitle>
-                                        <CardDescription>Most points accumulated</CardDescription>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">
+                                            Total Teams
+                                        </CardTitle>
+                                        <Users className="h-4 w-4 text-muted-foreground" />
                                     </CardHeader>
                                     <CardContent>
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Team</TableHead>
-                                                    <TableHead className="text-right">Points</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {Object.entries(allTeamStats.reduce((acc: any, stat) => {
-                                                    const tKey = stat.team_id;
-                                                    if (!acc[tKey]) acc[tKey] = { name: stat.team?.name || "Unknown", points: 0 };
-                                                    acc[tKey].points += stat.total_points;
-                                                    return acc;
-                                                }, {}))
-                                                    .sort(([, a]: any, [, b]: any) => b.points - a.points)
-                                                    .slice(0, 5)
-                                                    .map(([key, data]: any) => (
-                                                        <TableRow key={key}>
-                                                            <TableCell className="font-medium">{data.name}</TableCell>
-                                                            <TableCell className="text-right font-bold">{data.points}</TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                            </TableBody>
-                                        </Table>
+                                        <div className="text-2xl font-bold">{teams.length}</div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Registered teams
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">
+                                            Active Scrims (Today)
+                                        </CardTitle>
+                                        <Target className="h-4 w-4 text-muted-foreground" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold">
+                                            {scrims.filter(s => {
+                                                const scrimDate = new Date(s.startTime || "");
+                                                const today = new Date();
+                                                return scrimDate.getDate() === today.getDate() &&
+                                                    scrimDate.getMonth() === today.getMonth() &&
+                                                    scrimDate.getFullYear() === today.getFullYear();
+                                            }).length}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Scheduled for today
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">
+                                            Pending Reports
+                                        </CardTitle>
+                                        <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold">{reports.length}</div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Recent reports
+                                        </p>
                                     </CardContent>
                                 </Card>
                             </div>
-                        </div>
-                    </TabsContent>
+                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                                <Card className="col-span-4">
+                                    <CardHeader>
+                                        <CardTitle>Role Distribution</CardTitle>
+                                        <CardDescription>Breakdown of player roles across the platform</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="pl-2">
+                                        <div className="h-[350px]">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <Pie
+                                                        data={Object.entries(players.reduce((acc: any, player) => {
+                                                            const role = player.role || "Unassigned";
+                                                            acc[role] = (acc[role] || 0) + 1;
+                                                            return acc;
+                                                        }, {})).map(([name, value]) => ({ name, value }))}
+                                                        cx="50%"
+                                                        cy="50%"
+                                                        labelLine={false}
+                                                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                                        outerRadius={120}
+                                                        fill="#8884d8"
+                                                        dataKey="value"
+                                                    >
+                                                        {Object.entries(players.reduce((acc: any, player) => {
+                                                            const role = player.role || "Unassigned";
+                                                            acc[role] = (acc[role] || 0) + 1;
+                                                            return acc;
+                                                        }, {})).map((entry: any, index: number) => {
+                                                            const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#FF6384'];
+                                                            return <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />;
+                                                        })}
+                                                    </Pie>
+                                                    <Tooltip />
+                                                    <Legend />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </CardContent>
+                                </Card>
 
-                    <TabsContent value="feedback">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Community Feedback</CardTitle>
-                                <CardDescription>View all feedback submitted by users.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead>User</TableHead>
-                                            <TableHead>Tag</TableHead>
-                                            <TableHead>Content</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {feedback.map((f) => (
-                                            <TableRow key={f.id}>
-                                                <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                                                    {new Date(f.createdAt).toLocaleDateString()} {new Date(f.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-col">
-                                                        <span className="font-medium flex items-center gap-2">
-                                                            {f.player?.username || "Unknown"}
-                                                            {f.player?.profileUrl && (
-                                                                <a href={f.player.profileUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline">
-                                                                    View Profile
-                                                                </a>
-                                                            )}
-                                                        </span>
-                                                        <span className="text-xs text-muted-foreground">{f.player?.inGameName || "-"}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge variant="outline">{f.tag}</Badge>
-                                                </TableCell>
-                                                <TableCell className="max-w-md break-words whitespace-pre-wrap">
-                                                    {f.content}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                        {feedback.length === 0 && (
-                                            <TableRow>
-                                                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                                                    No feedback submissions found
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    <TabsContent value="scrims" className="space-y-4">
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <div>
-                                    <CardTitle>Scrims</CardTitle>
-                                    <CardDescription>Manage all scrims</CardDescription>
+                                <div className="col-span-3 grid gap-4">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Top Players</CardTitle>
+                                            <CardDescription>Highest kills across all matches</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Player</TableHead>
+                                                        <TableHead className="text-right">Kills</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {Object.entries(allPlayerStats.reduce((acc: any, stat) => {
+                                                        const pKey = stat.player?.username || stat.player_id;
+                                                        if (!acc[pKey]) acc[pKey] = { name: stat.player?.in_game_name || stat.player?.username || "Unknown", kills: 0 };
+                                                        acc[pKey].kills += stat.kills;
+                                                        return acc;
+                                                    }, {}))
+                                                        .sort(([, a]: any, [, b]: any) => b.kills - a.kills)
+                                                        .slice(0, 5)
+                                                        .map(([key, data]: any) => (
+                                                            <TableRow key={key}>
+                                                                <TableCell className="font-medium">{data.name}</TableCell>
+                                                                <TableCell className="text-right font-bold">{data.kills}</TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                </TableBody>
+                                            </Table>
+                                        </CardContent>
+                                    </Card>
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Top Teams</CardTitle>
+                                            <CardDescription>Most points accumulated</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Team</TableHead>
+                                                        <TableHead className="text-right">Points</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {Object.entries(allTeamStats.reduce((acc: any, stat) => {
+                                                        const tKey = stat.team_id;
+                                                        if (!acc[tKey]) acc[tKey] = { name: stat.team?.name || "Unknown", points: 0 };
+                                                        acc[tKey].points += stat.total_points;
+                                                        return acc;
+                                                    }, {}))
+                                                        .sort(([, a]: any, [, b]: any) => b.points - a.points)
+                                                        .slice(0, 5)
+                                                        .map(([key, data]: any) => (
+                                                            <TableRow key={key}>
+                                                                <TableCell className="font-medium">{data.name}</TableCell>
+                                                                <TableCell className="text-right font-bold">{data.points}</TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                </TableBody>
+                                            </Table>
+                                        </CardContent>
+                                    </Card>
                                 </div>
-                                <Dialog open={isCreateScrimOpen} onOpenChange={setIsCreateScrimOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button>
-                                            <Plus className="h-4 w-4 mr-2" />
-                                            Create Scrim
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                        <DialogHeader>
-                                            <DialogTitle>Create New Scrim</DialogTitle>
-                                            <DialogDescription>Set up a new scrim session</DialogDescription>
-                                        </DialogHeader>
-                                        <form onSubmit={handleCreateScrim} className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="scrimName">Scrim Name</Label>
-                                                <Input
-                                                    id="scrimName"
-                                                    placeholder="e.g. Daily Scrim #1"
-                                                    value={newScrim.name}
-                                                    onChange={(e) => setNewScrim({ ...newScrim, name: e.target.value })}
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="matchCount">Number of Matches</Label>
-                                                <Input
-                                                    id="matchCount"
-                                                    type="number"
-                                                    min="1"
-                                                    max="10"
-                                                    value={newScrim.matchCount}
-                                                    onChange={(e) => setNewScrim({ ...newScrim, matchCount: parseInt(e.target.value) || 0 })}
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="startTime">Start Time</Label>
-                                                <Input
-                                                    id="startTime"
-                                                    type="datetime-local"
-                                                    value={newScrim.startTime}
-                                                    onChange={(e) => setNewScrim({ ...newScrim, startTime: e.target.value })}
-                                                    required
-                                                />
-                                            </div>
-                                            <DialogFooter>
-                                                <Button type="submit" disabled={creatingScrim}>
-                                                    {creatingScrim ? "Creating..." : "Create Scrim"}
-                                                </Button>
-                                            </DialogFooter>
-                                        </form>
-                                    </DialogContent>
-                                </Dialog>
-                            </CardHeader>
-                            <CardContent>
-                                {scrims.length === 0 ? (
-                                    <div className="text-center py-12 text-muted-foreground">
-                                        <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                        <p>No scrims found</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-8">
-                                        {['ongoing', 'upcoming', 'completed'].map((status) => {
-                                            // Cast status to match Scrim['status'] to avoid type errors
-                                            const currentStatus = status as Scrim['status'];
-                                            const statusScrims = scrims.filter(s => s.status === currentStatus);
-                                            if (statusScrims.length === 0) return null;
+                            </div>
+                        </TabsContent>
 
-                                            return (
-                                                <div key={status} className="space-y-4">
-                                                    <h3 className="text-lg font-semibold capitalize flex items-center gap-2">
-                                                        {status === 'ongoing' && <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>}
-                                                        {status === 'ongoing' ? 'Live' : status} Scrims
-                                                    </h3>
-                                                    <div className="grid gap-4">
-                                                        {statusScrims.map((scrim) => (
-                                                            <div key={scrim.id} className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
-                                                                <div className="flex items-center gap-4">
-                                                                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                                                                        <Target className="h-6 w-6 text-primary" />
-                                                                    </div>
-                                                                    <div>
-                                                                        <h4 className="font-semibold text-lg">{scrim.name}</h4>
-                                                                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                                                            <span className="flex items-center gap-1">
-                                                                                <Calendar className="h-3 w-3" />
-                                                                                {new Date(scrim.startTime || "").toLocaleString()}
-                                                                            </span>
-                                                                            <span>{scrim.matchCount} Matches</span>
-                                                                            <Badge variant={scrim.status === 'upcoming' ? 'secondary' : scrim.status === 'ongoing' ? 'destructive' : 'default'}>
-                                                                                {scrim.status === 'ongoing' ? 'LIVE' : scrim.status.toUpperCase()}
-                                                                            </Badge>
+                        <TabsContent value="feedback">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Community Feedback</CardTitle>
+                                    <CardDescription>View all feedback submitted by users.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Date</TableHead>
+                                                <TableHead>User</TableHead>
+                                                <TableHead>Tag</TableHead>
+                                                <TableHead>Content</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {feedback.map((f) => (
+                                                <TableRow key={f.id}>
+                                                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                                                        {new Date(f.createdAt).toLocaleDateString()} {new Date(f.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex flex-col">
+                                                            <span className="font-medium flex items-center gap-2">
+                                                                {f.player?.username || "Unknown"}
+                                                                {f.player?.profileUrl && (
+                                                                    <a href={f.player.profileUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline">
+                                                                        View Profile
+                                                                    </a>
+                                                                )}
+                                                            </span>
+                                                            <span className="text-xs text-muted-foreground">{f.player?.inGameName || "-"}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge variant="outline">{f.tag}</Badge>
+                                                    </TableCell>
+                                                    <TableCell className="max-w-md break-words whitespace-pre-wrap">
+                                                        {f.content}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                            {feedback.length === 0 && (
+                                                <TableRow>
+                                                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                                                        No feedback submissions found
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
+                        <TabsContent value="scrims" className="space-y-4">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <div>
+                                        <CardTitle>Scrims</CardTitle>
+                                        <CardDescription>Manage all scrims</CardDescription>
+                                    </div>
+                                    <Dialog open={isCreateScrimOpen} onOpenChange={setIsCreateScrimOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button>
+                                                <Plus className="h-4 w-4 mr-2" />
+                                                Create Scrim
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Create New Scrim</DialogTitle>
+                                                <DialogDescription>Set up a new scrim session</DialogDescription>
+                                            </DialogHeader>
+                                            <form onSubmit={handleCreateScrim} className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="scrimName">Scrim Name</Label>
+                                                    <Input
+                                                        id="scrimName"
+                                                        placeholder="e.g. Daily Scrim #1"
+                                                        value={newScrim.name}
+                                                        onChange={(e) => setNewScrim({ ...newScrim, name: e.target.value })}
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="matchCount">Number of Matches</Label>
+                                                    <Input
+                                                        id="matchCount"
+                                                        type="number"
+                                                        min="1"
+                                                        max="10"
+                                                        value={newScrim.matchCount}
+                                                        onChange={(e) => setNewScrim({ ...newScrim, matchCount: parseInt(e.target.value) || 0 })}
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="startTime">Start Time</Label>
+                                                    <Input
+                                                        id="startTime"
+                                                        type="datetime-local"
+                                                        value={newScrim.startTime}
+                                                        onChange={(e) => setNewScrim({ ...newScrim, startTime: e.target.value })}
+                                                        required
+                                                    />
+                                                </div>
+                                                <DialogFooter>
+                                                    <Button type="submit" disabled={creatingScrim}>
+                                                        {creatingScrim ? "Creating..." : "Create Scrim"}
+                                                    </Button>
+                                                </DialogFooter>
+                                            </form>
+                                        </DialogContent>
+                                    </Dialog>
+                                </CardHeader>
+                                <CardContent>
+                                    {scrims.length === 0 ? (
+                                        <div className="text-center py-12 text-muted-foreground">
+                                            <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                            <p>No scrims found</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-8">
+                                            {['ongoing', 'upcoming', 'completed'].map((status) => {
+                                                // Cast status to match Scrim['status'] to avoid type errors
+                                                const currentStatus = status as Scrim['status'];
+                                                const statusScrims = scrims.filter(s => s.status === currentStatus);
+                                                if (statusScrims.length === 0) return null;
+
+                                                return (
+                                                    <div key={status} className="space-y-4">
+                                                        <h3 className="text-lg font-semibold capitalize flex items-center gap-2">
+                                                            {status === 'ongoing' && <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>}
+                                                            {status === 'ongoing' ? 'Live' : status} Scrims
+                                                        </h3>
+                                                        <div className="grid gap-4">
+                                                            {statusScrims.map((scrim) => (
+                                                                <div key={scrim.id} className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
+                                                                    <div className="flex items-center gap-4">
+                                                                        <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                                                                            <Target className="h-6 w-6 text-primary" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <h4 className="font-semibold text-lg">{scrim.name}</h4>
+                                                                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                                                                <span className="flex items-center gap-1">
+                                                                                    <Calendar className="h-3 w-3" />
+                                                                                    {new Date(scrim.startTime || "").toLocaleString()}
+                                                                                </span>
+                                                                                <span>{scrim.matchCount} Matches</span>
+                                                                                <Badge variant={scrim.status === 'upcoming' ? 'secondary' : scrim.status === 'ongoing' ? 'destructive' : 'default'}>
+                                                                                    {scrim.status === 'ongoing' ? 'LIVE' : scrim.status.toUpperCase()}
+                                                                                </Badge>
+                                                                            </div>
                                                                         </div>
                                                                     </div>
-                                                                </div>
-                                                                <div className="flex gap-2">
-                                                                    {scrim.status === 'completed' && (
-                                                                        <Button variant="secondary" onClick={() => navigate(`/scrim/${scrim.id}`)}>
-                                                                            View Results
+                                                                    <div className="flex gap-2">
+                                                                        {scrim.status === 'completed' && (
+                                                                            <Button variant="secondary" onClick={() => navigate(`/scrim/${scrim.id}`)}>
+                                                                                View Results
+                                                                            </Button>
+                                                                        )}
+                                                                        <Button variant="outline" onClick={() => navigate(`/scrim/${scrim.id}`)}>
+                                                                            Manage
                                                                         </Button>
-                                                                    )}
-                                                                    <Button variant="outline" onClick={() => navigate(`/scrim/${scrim.id}`)}>
-                                                                        Manage
-                                                                    </Button>
-                                                                    <Button variant="destructive" size="icon" onClick={() => handleDeleteScrim(scrim.id)}>
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </Button>
+                                                                        <Button variant="destructive" size="icon" onClick={() => handleDeleteScrim(scrim.id)}>
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        ))}
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
 
-                    <TabsContent value="teams">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Registered Teams</CardTitle>
-                                <CardDescription>List of all registered teams</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Team Name</TableHead>
-                                            <TableHead>Email</TableHead>
-                                            <TableHead>Country</TableHead>
-                                            <TableHead>Joined At</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {teams.map((team) => (
-                                            <TableRow key={team.id}>
-                                                <TableCell className="font-medium">
-                                                    <Button
-                                                        variant="link"
-                                                        className="p-0 h-auto font-medium flex items-center gap-2 text-foreground hover:text-primary"
-                                                        onClick={() => setSelectedTeam(team)}
-                                                    >
-                                                        <Users className="h-4 w-4 text-muted-foreground" />
-                                                        {team.name}
-                                                    </Button>
-                                                </TableCell>
-                                                <TableCell>{team.email}</TableCell>
-                                                <TableCell>{team.country || "N/A"}</TableCell>
-                                                <TableCell>{new Date(team.createdAt).toLocaleDateString()}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                        {teams.length === 0 && (
+                        <TabsContent value="teams">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Registered Teams</CardTitle>
+                                    <CardDescription>List of all registered teams</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader>
                                             <TableRow>
-                                                <TableCell colSpan={4} className="text-center text-muted-foreground">
-                                                    No teams registered
-                                                </TableCell>
+                                                <TableHead>Team Name</TableHead>
+                                                <TableHead>Email</TableHead>
+                                                <TableHead>Country</TableHead>
+                                                <TableHead>Joined At</TableHead>
                                             </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {teams.map((team) => (
+                                                <TableRow key={team.id}>
+                                                    <TableCell className="font-medium">
+                                                        <Button
+                                                            variant="link"
+                                                            className="p-0 h-auto font-medium flex items-center gap-2 text-foreground hover:text-primary"
+                                                            onClick={() => setSelectedTeam(team)}
+                                                        >
+                                                            <Users className="h-4 w-4 text-muted-foreground" />
+                                                            {team.name}
+                                                        </Button>
+                                                    </TableCell>
+                                                    <TableCell>{team.email}</TableCell>
+                                                    <TableCell>{team.country || "N/A"}</TableCell>
+                                                    <TableCell>{new Date(team.createdAt).toLocaleDateString()}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                            {teams.length === 0 && (
+                                                <TableRow>
+                                                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                                        No teams registered
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
 
-                        <Dialog open={!!selectedTeam} onOpenChange={(open) => !open && setSelectedTeam(null)}>
-                            <DialogContent className="max-w-3xl">
-                                <DialogHeader>
-                                    <DialogTitle className="flex items-center gap-2">
-                                        <Users className="h-5 w-5" />
-                                        {selectedTeam?.name} - Roster
-                                    </DialogTitle>
-                                    <DialogDescription>
-                                        Players currently in this team
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <div className="mt-4">
+                            <Dialog open={!!selectedTeam} onOpenChange={(open) => !open && setSelectedTeam(null)}>
+                                <DialogContent className="max-w-3xl">
+                                    <DialogHeader>
+                                        <DialogTitle className="flex items-center gap-2">
+                                            <Users className="h-5 w-5" />
+                                            {selectedTeam?.name} - Roster
+                                        </DialogTitle>
+                                        <DialogDescription>
+                                            Players currently in this team
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="mt-4">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Username</TableHead>
+                                                    <TableHead>Email</TableHead>
+                                                    <TableHead>Role</TableHead>
+                                                    <TableHead>Status</TableHead>
+                                                    <TableHead>Joined At</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {players.filter(p => p.teamId === selectedTeam?.id).map((player) => (
+                                                    <TableRow key={player.id}>
+                                                        <TableCell className="font-medium">
+                                                            <Button
+                                                                variant="link"
+                                                                className="p-0 h-auto font-medium flex items-center gap-2 text-foreground hover:text-primary"
+                                                                onClick={() => navigate(`/player/${player.username}`)}
+                                                            >
+                                                                <User className="h-4 w-4 text-muted-foreground" />
+                                                                {player.inGameName || player.username}
+                                                            </Button>
+                                                        </TableCell>
+                                                        <TableCell>{player.email}</TableCell>
+                                                        <TableCell>
+                                                            {player.role ? <Badge variant="outline">{player.role}</Badge> : '-'}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant={player.status === 'approved' ? 'default' : 'secondary'}>
+                                                                {player.status}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>{new Date(player.createdAt).toLocaleDateString()}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                                {players.filter(p => p.teamId === selectedTeam?.id).length === 0 && (
+                                                    <TableRow>
+                                                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                                                            No players found in this team
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+                        </TabsContent>
+
+                        <TabsContent value="players">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <div>
+                                        <CardTitle>Registered Players</CardTitle>
+                                        <CardDescription>List of all registered players</CardDescription>
+                                    </div>
+                                    <Button variant="outline" size="sm" onClick={handleFixUsernames}>
+                                        <User className="h-4 w-4 mr-2" />
+                                        Fix Usernames
+                                    </Button>
+                                </CardHeader>
+                                <CardContent>
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead>Username</TableHead>
+                                                <TableHead>In-Game Name</TableHead>
+                                                <TableHead>Game UID</TableHead>
                                                 <TableHead>Email</TableHead>
-                                                <TableHead>Role</TableHead>
+                                                <TableHead>Team</TableHead>
                                                 <TableHead>Status</TableHead>
                                                 <TableHead>Joined At</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {players.filter(p => p.teamId === selectedTeam?.id).map((player) => (
+                                            {players.map((player) => (
                                                 <TableRow key={player.id}>
                                                     <TableCell className="font-medium">
                                                         <Button
@@ -797,9 +1415,13 @@ const AdminDashboard = () => {
                                                             {player.inGameName || player.username}
                                                         </Button>
                                                     </TableCell>
+                                                    <TableCell>{player.inGameName || "-"}</TableCell>
+                                                    <TableCell className="font-mono text-xs">{player.gameUid || "-"}</TableCell>
                                                     <TableCell>{player.email}</TableCell>
                                                     <TableCell>
-                                                        {player.role ? <Badge variant="outline">{player.role}</Badge> : '-'}
+                                                        <Badge variant="outline">
+                                                            {getTeamName(player.teamId)}
+                                                        </Badge>
                                                     </TableCell>
                                                     <TableCell>
                                                         <Badge variant={player.status === 'approved' ? 'default' : 'secondary'}>
@@ -809,493 +1431,427 @@ const AdminDashboard = () => {
                                                     <TableCell>{new Date(player.createdAt).toLocaleDateString()}</TableCell>
                                                 </TableRow>
                                             ))}
-                                            {players.filter(p => p.teamId === selectedTeam?.id).length === 0 && (
+                                            {players.length === 0 && (
                                                 <TableRow>
-                                                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                                                        No players found in this team
+                                                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                                                        No players registered
                                                     </TableCell>
                                                 </TableRow>
                                             )}
                                         </TableBody>
                                     </Table>
-                                </div>
-                            </DialogContent>
-                        </Dialog>
-                    </TabsContent>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
 
-                    <TabsContent value="players">
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <div>
-                                    <CardTitle>Registered Players</CardTitle>
-                                    <CardDescription>List of all registered players</CardDescription>
-                                </div>
-                                <Button variant="outline" size="sm" onClick={handleFixUsernames}>
-                                    <User className="h-4 w-4 mr-2" />
-                                    Fix Usernames
-                                </Button>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Username</TableHead>
-                                            <TableHead>In-Game Name</TableHead>
-                                            <TableHead>Game UID</TableHead>
-                                            <TableHead>Email</TableHead>
-                                            <TableHead>Team</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>Joined At</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {players.map((player) => (
-                                            <TableRow key={player.id}>
-                                                <TableCell className="font-medium">
-                                                    <Button
-                                                        variant="link"
-                                                        className="p-0 h-auto font-medium flex items-center gap-2 text-foreground hover:text-primary"
-                                                        onClick={() => navigate(`/player/${player.username}`)}
-                                                    >
-                                                        <User className="h-4 w-4 text-muted-foreground" />
-                                                        {player.inGameName || player.username}
-                                                    </Button>
-                                                </TableCell>
-                                                <TableCell>{player.inGameName || "-"}</TableCell>
-                                                <TableCell className="font-mono text-xs">{player.gameUid || "-"}</TableCell>
-                                                <TableCell>{player.email}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant="outline">
-                                                        {getTeamName(player.teamId)}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge variant={player.status === 'approved' ? 'default' : 'secondary'}>
-                                                        {player.status}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>{new Date(player.createdAt).toLocaleDateString()}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                        {players.length === 0 && (
+                        <TabsContent value="reports">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Player Reports</CardTitle>
+                                    <CardDescription>View and manage reports filed against players.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader>
                                             <TableRow>
-                                                <TableCell colSpan={7} className="text-center text-muted-foreground">
-                                                    No players registered
-                                                </TableCell>
+                                                <TableHead>Date</TableHead>
+                                                <TableHead>Reporter</TableHead>
+                                                <TableHead>Reported Player</TableHead>
+                                                <TableHead>Reason</TableHead>
+                                                <TableHead>Scrim</TableHead>
+                                                <TableHead>Votes</TableHead>
                                             </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    <TabsContent value="reports">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Player Reports</CardTitle>
-                                <CardDescription>View and manage reports filed against players.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead>Reporter</TableHead>
-                                            <TableHead>Reported Player</TableHead>
-                                            <TableHead>Reason</TableHead>
-                                            <TableHead>Scrim</TableHead>
-                                            <TableHead>Votes</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {reports.map((report) => (
-                                            <TableRow key={report.id}>
-                                                <TableCell className="text-sm text-muted-foreground">
-                                                    {new Date(report.createdAt).toLocaleDateString()}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-col">
-                                                        <span className="font-medium">{report.reporter?.username}</span>
-                                                        <span className="text-xs text-muted-foreground">{report.reporter?.inGameName}</span>
-                                                        {report.reporter?.phoneNumber && (
-                                                            <span className="text-xs text-muted-foreground">{report.reporter.phoneNumber}</span>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-col">
-                                                        <span className="font-medium text-destructive">{report.reportedPlayer?.username}</span>
-                                                        <span className="text-xs text-muted-foreground">{report.reportedPlayer?.inGameName}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="max-w-[200px] truncate" title={report.reason}>
-                                                    {report.reason}
-                                                </TableCell>
-                                                <TableCell>{report.scrimName || report.scrimId}</TableCell>
-                                                <TableCell>
-                                                    <div className="flex gap-2">
-                                                        <Badge variant="outline" className="text-green-500 border-green-200">
-                                                            {report.likes} Likes
-                                                        </Badge>
-                                                        <Badge variant="outline" className="text-red-500 border-red-200">
-                                                            {report.dislikes} Dislikes
-                                                        </Badge>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                        {reports.length === 0 && (
-                                            <TableRow>
-                                                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                                                    No reports found
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    <TabsContent value="recruitment">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Recruitment Posts</CardTitle>
-                                <CardDescription>Manage Looking for Team (LFT) and Looking for User (LFP) posts.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead>Type</TableHead>
-                                            <TableHead>Author/Team</TableHead>
-                                            <TableHead>Role</TableHead>
-                                            <TableHead>Description</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {recruitmentPosts.map((post) => (
-                                            <TableRow key={post.id}>
-                                                <TableCell>{new Date(post.createdAt).toLocaleDateString()}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant={post.type === 'LFT' ? 'secondary' : 'default'}>
-                                                        {post.type}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>
-                                                    {post.type === 'LFT' ? (
+                                        </TableHeader>
+                                        <TableBody>
+                                            {reports.map((report) => (
+                                                <TableRow key={report.id}>
+                                                    <TableCell className="text-sm text-muted-foreground">
+                                                        {new Date(report.createdAt).toLocaleDateString()}
+                                                    </TableCell>
+                                                    <TableCell>
                                                         <div className="flex flex-col">
-                                                            <span className="font-medium">{post.author?.username}</span>
-                                                            <span className="text-xs text-muted-foreground">{post.author?.inGameName}</span>
+                                                            <span className="font-medium">{report.reporter?.username}</span>
+                                                            <span className="text-xs text-muted-foreground">{report.reporter?.inGameName}</span>
+                                                            {report.reporter?.phoneNumber && (
+                                                                <span className="text-xs text-muted-foreground">{report.reporter.phoneNumber}</span>
+                                                            )}
                                                         </div>
-                                                    ) : (
-                                                        <span className="font-medium">{post.team?.name}</span>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>{post.role}</TableCell>
-                                                <TableCell className="max-w-[200px] truncate" title={post.description}>
-                                                    {post.description}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge variant={post.status === 'active' ? 'outline' : 'secondary'}>
-                                                        {post.status.toUpperCase()}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Button variant="destructive" size="sm" onClick={() => handleDeleteRecruitmentPost(post.id)}>
-                                                        <LogOut className="h-4 w-4" />
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                        {recruitmentPosts.length === 0 && (
-                                            <TableRow>
-                                                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                                                    No posts found
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    <TabsContent value="transfers">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Transfer Activity Log</CardTitle>
-                                <CardDescription>Monitor all recruitment applications and transfer offers.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Type</TableHead>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead>Actor</TableHead>
-                                            <TableHead>Target</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>Details</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {transfers.length === 0 ? (
-                                            <TableRow>
-                                                <TableCell colSpan={6} className="text-center">No activity found</TableCell>
-                                            </TableRow>
-                                        ) : (
-                                            transfers.map((t) => (
-                                                <TableRow key={`${t.type}-${t.id}`}>
-                                                    <TableCell>
-                                                        <Badge variant={t.type === 'application' ? 'default' : 'secondary'}>
-                                                            {t.type.toUpperCase()}
-                                                        </Badge>
                                                     </TableCell>
-                                                    <TableCell>{t.date.toLocaleString()}</TableCell>
-                                                    <TableCell className="font-medium">{t.actor}</TableCell>
-                                                    <TableCell>{t.target}</TableCell>
                                                     <TableCell>
-                                                        <Badge variant={t.status === 'accepted' ? 'outline' : t.status === 'rejected' ? 'destructive' : t.status === 'pending_exit_approval' ? 'secondary' : 'default'}>
-                                                            {t.status.toUpperCase()}
-                                                        </Badge>
+                                                        <div className="flex flex-col">
+                                                            <span className="font-medium text-destructive">{report.reportedPlayer?.username}</span>
+                                                            <span className="text-xs text-muted-foreground">{report.reportedPlayer?.inGameName}</span>
+                                                        </div>
                                                     </TableCell>
-                                                    <TableCell className="max-w-xs truncate" title={t.details}>
-                                                        {t.details}
+                                                    <TableCell className="max-w-[200px] truncate" title={report.reason}>
+                                                        {report.reason}
+                                                    </TableCell>
+                                                    <TableCell>{report.scrimName || report.scrimId}</TableCell>
+                                                    <TableCell>
+                                                        <div className="flex gap-2">
+                                                            <Badge variant="outline" className="text-green-500 border-green-200">
+                                                                {report.likes} Likes
+                                                            </Badge>
+                                                            <Badge variant="outline" className="text-red-500 border-red-200">
+                                                                {report.dislikes} Dislikes
+                                                            </Badge>
+                                                        </div>
                                                     </TableCell>
                                                 </TableRow>
-                                            ))
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
+                                            ))}
+                                            {reports.length === 0 && (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                                                        No reports found
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
 
-                    <TabsContent value="users">
-                        <Tabs defaultValue="team" className="w-full">
-                            <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="team">Create Team</TabsTrigger>
-                                <TabsTrigger value="player">Create Player</TabsTrigger>
-                            </TabsList>
+                        <TabsContent value="recruitment">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Recruitment Posts</CardTitle>
+                                    <CardDescription>Manage Looking for Team (LFT) and Looking for User (LFP) posts.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Date</TableHead>
+                                                <TableHead>Type</TableHead>
+                                                <TableHead>Author/Team</TableHead>
+                                                <TableHead>Role</TableHead>
+                                                <TableHead>Description</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead>Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {recruitmentPosts.map((post) => (
+                                                <TableRow key={post.id}>
+                                                    <TableCell>{new Date(post.createdAt).toLocaleDateString()}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={post.type === 'LFT' ? 'secondary' : 'default'}>
+                                                            {post.type}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {post.type === 'LFT' ? (
+                                                            <div className="flex flex-col">
+                                                                <span className="font-medium">{post.author?.username}</span>
+                                                                <span className="text-xs text-muted-foreground">{post.author?.inGameName}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="font-medium">{post.team?.name}</span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>{post.role}</TableCell>
+                                                    <TableCell className="max-w-[200px] truncate" title={post.description}>
+                                                        {post.description}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={post.status === 'active' ? 'outline' : 'secondary'}>
+                                                            {post.status.toUpperCase()}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Button variant="destructive" size="sm" onClick={() => handleDeleteRecruitmentPost(post.id)}>
+                                                            <LogOut className="h-4 w-4" />
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                            {recruitmentPosts.length === 0 && (
+                                                <TableRow>
+                                                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                                                        No posts found
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
 
-                            <TabsContent value="team">
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Create Team</CardTitle>
-                                        <CardDescription>Register a new team with all details.</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <form onSubmit={handleCreateTeam} className="space-y-4">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="teamName">Team Name</Label>
-                                                    <Input
-                                                        id="teamName"
-                                                        value={newTeam.name}
-                                                        onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
-                                                        required
-                                                    />
+                        <TabsContent value="transfers">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Transfer Activity Log</CardTitle>
+                                    <CardDescription>Monitor all recruitment applications and transfer offers.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Type</TableHead>
+                                                <TableHead>Date</TableHead>
+                                                <TableHead>Actor</TableHead>
+                                                <TableHead>Target</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead>Details</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {transfers.length === 0 ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="text-center">No activity found</TableCell>
+                                                </TableRow>
+                                            ) : (
+                                                transfers.map((t) => (
+                                                    <TableRow key={`${t.type}-${t.id}`}>
+                                                        <TableCell>
+                                                            <Badge variant={t.type === 'application' ? 'default' : 'secondary'}>
+                                                                {t.type.toUpperCase()}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>{t.date.toLocaleString()}</TableCell>
+                                                        <TableCell className="font-medium">{t.actor}</TableCell>
+                                                        <TableCell>{t.target}</TableCell>
+                                                        <TableCell>
+                                                            <Badge variant={t.status === 'accepted' ? 'outline' : t.status === 'rejected' ? 'destructive' : t.status === 'pending_exit_approval' ? 'secondary' : 'default'}>
+                                                                {t.status.toUpperCase()}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="max-w-xs truncate" title={t.details}>
+                                                            {t.details}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
+                        <TabsContent value="users">
+                            <Tabs defaultValue="team" className="w-full">
+                                <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="team">Create Team</TabsTrigger>
+                                    <TabsTrigger value="player">Create Player</TabsTrigger>
+                                </TabsList>
+
+                                <TabsContent value="team">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Create Team</CardTitle>
+                                            <CardDescription>Register a new team with all details.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <form onSubmit={handleCreateTeam} className="space-y-4">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="teamName">Team Name</Label>
+                                                        <Input
+                                                            id="teamName"
+                                                            value={newTeam.name}
+                                                            onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="teamCountry">Country</Label>
+                                                        <Input
+                                                            id="teamCountry"
+                                                            value={newTeam.country}
+                                                            onChange={(e) => setNewTeam({ ...newTeam, country: e.target.value })}
+                                                            placeholder="e.g. India"
+                                                        />
+                                                    </div>
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <Label htmlFor="teamCountry">Country</Label>
+                                                    <Label htmlFor="teamEmail">Email</Label>
                                                     <Input
-                                                        id="teamCountry"
-                                                        value={newTeam.country}
-                                                        onChange={(e) => setNewTeam({ ...newTeam, country: e.target.value })}
-                                                        placeholder="e.g. India"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="teamEmail">Email</Label>
-                                                <Input
-                                                    id="teamEmail"
-                                                    type="email"
-                                                    value={newTeam.email}
-                                                    onChange={(e) => setNewTeam({ ...newTeam, email: e.target.value })}
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="teamPassword">Password</Label>
-                                                <div className="flex gap-2">
-                                                    <Input
-                                                        id="teamPassword"
-                                                        value={newTeam.password}
-                                                        onChange={(e) => setNewTeam({ ...newTeam, password: e.target.value })}
+                                                        id="teamEmail"
+                                                        type="email"
+                                                        value={newTeam.email}
+                                                        onChange={(e) => setNewTeam({ ...newTeam, email: e.target.value })}
                                                         required
                                                     />
-                                                    <Button type="button" variant="outline" onClick={() => setNewTeam({ ...newTeam, password: Math.random().toString(36).slice(-8) })}>
-                                                        Generate
-                                                    </Button>
                                                 </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="teamJoinCode">Join Code</Label>
-                                                <div className="flex gap-2">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="teamPassword">Password</Label>
+                                                    <div className="flex gap-2">
+                                                        <Input
+                                                            id="teamPassword"
+                                                            value={newTeam.password}
+                                                            onChange={(e) => setNewTeam({ ...newTeam, password: e.target.value })}
+                                                            required
+                                                        />
+                                                        <Button type="button" variant="outline" onClick={() => setNewTeam({ ...newTeam, password: Math.random().toString(36).slice(-8) })}>
+                                                            Generate
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="teamJoinCode">Join Code</Label>
+                                                    <div className="flex gap-2">
+                                                        <Input
+                                                            id="teamJoinCode"
+                                                            value={newTeam.joinCode}
+                                                            onChange={(e) => setNewTeam({ ...newTeam, joinCode: e.target.value.toUpperCase() })}
+                                                            required
+                                                            maxLength={6}
+                                                        />
+                                                        <Button type="button" variant="outline" onClick={() => setNewTeam({ ...newTeam, joinCode: Math.random().toString(36).substring(2, 8).toUpperCase() })}>
+                                                            Generate
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                                <Button type="submit" disabled={isCreatingUser} className="w-full">
+                                                    {isCreatingUser ? "Creating..." : "Create Team"}
+                                                </Button>
+                                            </form>
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
+
+                                <TabsContent value="player">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Create Player</CardTitle>
+                                            <CardDescription>Register a new player. Specify a team code to auto-join.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <form onSubmit={handleCreatePlayer} className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="playerUsername">Username</Label>
                                                     <Input
-                                                        id="teamJoinCode"
-                                                        value={newTeam.joinCode}
-                                                        onChange={(e) => setNewTeam({ ...newTeam, joinCode: e.target.value.toUpperCase() })}
+                                                        id="playerUsername"
+                                                        value={newPlayer.username}
+                                                        onChange={(e) => setNewPlayer({ ...newPlayer, username: e.target.value })}
                                                         required
-                                                        maxLength={6}
                                                     />
-                                                    <Button type="button" variant="outline" onClick={() => setNewTeam({ ...newTeam, joinCode: Math.random().toString(36).substring(2, 8).toUpperCase() })}>
-                                                        Generate
-                                                    </Button>
                                                 </div>
-                                            </div>
-                                            <Button type="submit" disabled={isCreatingUser} className="w-full">
-                                                {isCreatingUser ? "Creating..." : "Create Team"}
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="playerEmail">Email</Label>
+                                                    <Input
+                                                        id="playerEmail"
+                                                        type="email"
+                                                        value={newPlayer.email}
+                                                        onChange={(e) => setNewPlayer({ ...newPlayer, email: e.target.value })}
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="playerPassword">Password</Label>
+                                                    <div className="flex gap-2">
+                                                        <Input
+                                                            id="playerPassword"
+                                                            value={newPlayer.password}
+                                                            onChange={(e) => setNewPlayer({ ...newPlayer, password: e.target.value })}
+                                                            required
+                                                        />
+                                                        <Button type="button" variant="outline" onClick={() => setNewPlayer({ ...newPlayer, password: Math.random().toString(36).slice(-8) })}>
+                                                            Generate
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="playerPhone">Phone Number</Label>
+                                                    <Input
+                                                        id="playerPhone"
+                                                        value={newPlayer.phoneNumber}
+                                                        onChange={(e) => setNewPlayer({ ...newPlayer, phoneNumber: e.target.value })}
+                                                        required
+                                                    />
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="playerJoinCode">Join Team Code (Optional)</Label>
+                                                        <Input
+                                                            id="playerJoinCode"
+                                                            value={newPlayer.joinCode}
+                                                            onChange={(e) => setNewPlayer({ ...newPlayer, joinCode: e.target.value.toUpperCase() })}
+                                                            placeholder="Leave empty for Free Agent"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label>Role</Label>
+                                                        <Select
+                                                            value={newPlayer.role}
+                                                            onValueChange={(value) => setNewPlayer({ ...newPlayer, role: value })}
+                                                            required={!!newPlayer.joinCode}
+                                                        >
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Select Role" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="IGL">IGL</SelectItem>
+                                                                <SelectItem value="Rusher">Rusher</SelectItem>
+                                                                <SelectItem value="Sniper">Sniper</SelectItem>
+                                                                <SelectItem value="Flanker">Flanker</SelectItem>
+                                                                <SelectItem value="Support">Support</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        {newPlayer.joinCode && !newPlayer.role && (
+                                                            <p className="text-xs text-destructive">Role is required when joining a team.</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <Button type="submit" disabled={isCreatingUser} className="w-full">
+                                                    {isCreatingUser ? "Creating..." : "Create Player"}
+                                                </Button>
+                                            </form>
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
+                            </Tabs>
+                        </TabsContent>
+
+                    </Tabs>
+
+                    {/* Credentials Dialog */}
+                    <Dialog open={!!createdCredentials} onOpenChange={(open) => !open && setCreatedCredentials(null)}>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Account Created Successfully</DialogTitle>
+                                <DialogDescription>
+                                    Copy these credentials and send them to the user.
+                                </DialogDescription>
+                            </DialogHeader>
+                            {createdCredentials && (
+                                <div className="space-y-4 py-4">
+                                    <div className="space-y-2">
+                                        <Label>Email</Label>
+                                        <div className="flex items-center gap-2">
+                                            <Input readOnly value={createdCredentials.email} />
+                                            <Button size="icon" variant="outline" onClick={() => navigator.clipboard.writeText(createdCredentials.email)}>
+                                                <Copy className="h-4 w-4" />
                                             </Button>
-                                        </form>
-                                    </CardContent>
-                                </Card>
-                            </TabsContent>
-
-                            <TabsContent value="player">
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Create Player</CardTitle>
-                                        <CardDescription>Register a new player. Specify a team code to auto-join.</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <form onSubmit={handleCreatePlayer} className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="playerUsername">Username</Label>
-                                                <Input
-                                                    id="playerUsername"
-                                                    value={newPlayer.username}
-                                                    onChange={(e) => setNewPlayer({ ...newPlayer, username: e.target.value })}
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="playerEmail">Email</Label>
-                                                <Input
-                                                    id="playerEmail"
-                                                    type="email"
-                                                    value={newPlayer.email}
-                                                    onChange={(e) => setNewPlayer({ ...newPlayer, email: e.target.value })}
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="playerPassword">Password</Label>
-                                                <div className="flex gap-2">
-                                                    <Input
-                                                        id="playerPassword"
-                                                        value={newPlayer.password}
-                                                        onChange={(e) => setNewPlayer({ ...newPlayer, password: e.target.value })}
-                                                        required
-                                                    />
-                                                    <Button type="button" variant="outline" onClick={() => setNewPlayer({ ...newPlayer, password: Math.random().toString(36).slice(-8) })}>
-                                                        Generate
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="playerPhone">Phone Number</Label>
-                                                <Input
-                                                    id="playerPhone"
-                                                    value={newPlayer.phoneNumber}
-                                                    onChange={(e) => setNewPlayer({ ...newPlayer, phoneNumber: e.target.value })}
-                                                    required
-                                                />
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="playerJoinCode">Join Team Code (Optional)</Label>
-                                                    <Input
-                                                        id="playerJoinCode"
-                                                        value={newPlayer.joinCode}
-                                                        onChange={(e) => setNewPlayer({ ...newPlayer, joinCode: e.target.value.toUpperCase() })}
-                                                        placeholder="Leave empty for Free Agent"
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Role</Label>
-                                                    <Select
-                                                        value={newPlayer.role}
-                                                        onValueChange={(value) => setNewPlayer({ ...newPlayer, role: value })}
-                                                        required={!!newPlayer.joinCode}
-                                                    >
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select Role" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="IGL">IGL</SelectItem>
-                                                            <SelectItem value="Rusher">Rusher</SelectItem>
-                                                            <SelectItem value="Sniper">Sniper</SelectItem>
-                                                            <SelectItem value="Flanker">Flanker</SelectItem>
-                                                            <SelectItem value="Support">Support</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                    {newPlayer.joinCode && !newPlayer.role && (
-                                                        <p className="text-xs text-destructive">Role is required when joining a team.</p>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <Button type="submit" disabled={isCreatingUser} className="w-full">
-                                                {isCreatingUser ? "Creating..." : "Create Player"}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Password</Label>
+                                        <div className="flex items-center gap-2">
+                                            <Input readOnly value={createdCredentials.password} />
+                                            <Button size="icon" variant="outline" onClick={() => navigator.clipboard.writeText(createdCredentials.password)}>
+                                                <Copy className="h-4 w-4" />
                                             </Button>
-                                        </form>
-                                    </CardContent>
-                                </Card>
-                            </TabsContent>
-                        </Tabs>
-                    </TabsContent>
-
-                </Tabs>
-
-                {/* Credentials Dialog */}
-                <Dialog open={!!createdCredentials} onOpenChange={(open) => !open && setCreatedCredentials(null)}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Account Created Successfully</DialogTitle>
-                            <DialogDescription>
-                                Copy these credentials and send them to the user.
-                            </DialogDescription>
-                        </DialogHeader>
-                        {createdCredentials && (
-                            <div className="space-y-4 py-4">
-                                <div className="space-y-2">
-                                    <Label>Email</Label>
-                                    <div className="flex items-center gap-2">
-                                        <Input readOnly value={createdCredentials.email} />
-                                        <Button size="icon" variant="outline" onClick={() => navigator.clipboard.writeText(createdCredentials.email)}>
-                                            <Copy className="h-4 w-4" />
-                                        </Button>
+                                        </div>
+                                    </div>
+                                    <div className="bg-muted p-3 rounded-md text-sm text-yellow-600 flex items-center gap-2">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        Make sure to copy these now. You won't see the password again.
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>Password</Label>
-                                    <div className="flex items-center gap-2">
-                                        <Input readOnly value={createdCredentials.password} />
-                                        <Button size="icon" variant="outline" onClick={() => navigator.clipboard.writeText(createdCredentials.password)}>
-                                            <Copy className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-                                <div className="bg-muted p-3 rounded-md text-sm text-yellow-600 flex items-center gap-2">
-                                    <AlertTriangle className="h-4 w-4" />
-                                    Make sure to copy these now. You won't see the password again.
-                                </div>
-                            </div>
-                        )}
-                        <DialogFooter>
-                            <Button onClick={() => setCreatedCredentials(null)}>Close</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>            </main>
-        </div >
+                            )}
+                            <DialogFooter>
+                                <Button onClick={() => setCreatedCredentials(null)}>Close</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </main>
+            )}
+        </div>
     );
 };
 

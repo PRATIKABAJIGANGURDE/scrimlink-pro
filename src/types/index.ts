@@ -209,3 +209,45 @@ export interface Feedback {
     profileUrl?: string;
   };
 }
+
+export interface Tournament {
+  id: string;
+  name: string;
+  status: 'upcoming' | 'ongoing' | 'completed';
+  maxTeams: number;
+  currentTeams: number;
+  startDate?: string;
+  endDate?: string;
+  createdAt: string;
+}
+
+export interface TournamentRound {
+  id: string;
+  tournamentId: string;
+  name: string; // e.g. "Qualifiers", "Semi-Finals", "Grand Final"
+  roundOrder: number; // 1, 2, 3...
+  status: 'upcoming' | 'ongoing' | 'completed';
+  createdAt: string;
+}
+
+export interface TournamentGroup {
+  id: string;
+  roundId: string;
+  name: string; // e.g. "Group A"
+  status: 'upcoming' | 'ongoing' | 'completed';
+  createdAt: string;
+}
+
+export interface TournamentTeam {
+  id: string; // unique ID for this tournament entry
+  tournamentId: string;
+  roundId: string;
+  groupId: string;
+  teamId: string;
+  teamName: string;
+  matchesPlayed: number;
+  totalPoints: number;
+  wins: number; // or Booyahs
+  kills: number;
+  joinedAt: string;
+}
