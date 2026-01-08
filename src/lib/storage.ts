@@ -352,6 +352,32 @@ export const getScrimById = async (id: string): Promise<Scrim | null> => {
   };
 };
 
+export const deleteScrim = async (id: string): Promise<void> => {
+  // 1. Get all matches for this scrim
+  const { data: matches } = await supabase.from('matches').select('id').eq('scrim_id', id);
+  const matchIds = matches?.map((m: any) => m.id) || [];
+
+  if (matchIds.length > 0) {
+    // 2. Delete match stats
+    await supabase.from('match_team_stats').delete().in('match_id', matchIds);
+    await supabase.from('match_player_stats').delete().in('match_id', matchIds);
+
+    // 3. Delete matches
+    await supabase.from('matches').delete().eq('scrim_id', id);
+  }
+
+  // 4. Delete scrim teams
+  await supabase.from('scrim_teams').delete().eq('scrim_id', id);
+
+  // 5. Delete scrim
+  const { error } = await supabase
+    .from('scrims')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+};
+
 // Matches
 export const getMatches = async (): Promise<Match[]> => {
   const { data, error } = await supabase.from('matches').select('*');

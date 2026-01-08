@@ -23,10 +23,14 @@ import {
     getAllTransferActivitiesForAdmin,
     fixUsernameSpaces,
     getAllRecruitmentPostsForAdmin,
-    deleteRecruitmentPost
+    deleteRecruitmentPost,
+    getFeedback,
+    getAllPlayerStats,
+    getAllTeamStats,
+    deleteScrim
 } from "@/lib/storage";
-import { Scrim, Match, Team, Player } from "@/types";
-import { Shield, LogOut, Plus, Target, Calendar, Trophy, BarChart, Users, User, AlertTriangle } from "lucide-react";
+import { Scrim, Match, Team, Player, Feedback } from "@/types";
+import { Shield, LogOut, Plus, Target, Calendar, Trophy, BarChart, Users, User, AlertTriangle, MessageCircle, Activity, Trash2 } from "lucide-react";
 import { ResponsiveNavbar } from "@/components/ResponsiveNavbar";
 import {
     AlertDialog,
@@ -43,6 +47,7 @@ import {
 import { adminCreatePlayer, adminCreateTeam } from "@/lib/adminAuth";
 import { Copy, UserPlus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
@@ -55,6 +60,9 @@ const AdminDashboard = () => {
     const [reports, setReports] = useState<any[]>([]);
     const [transfers, setTransfers] = useState<any[]>([]);
     const [recruitmentPosts, setRecruitmentPosts] = useState<any[]>([]);
+    const [feedback, setFeedback] = useState<Feedback[]>([]);
+    const [allPlayerStats, setAllPlayerStats] = useState<any[]>([]);
+    const [allTeamStats, setAllTeamStats] = useState<any[]>([]);
     const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
     const [isCreateScrimOpen, setIsCreateScrimOpen] = useState(false);
     const [creatingScrim, setCreatingScrim] = useState(false);
@@ -105,20 +113,37 @@ const AdminDashboard = () => {
 
     const loadData = async () => {
         try {
-            const [allScrims, allTeams, allPlayers, allReports, allTransfers, allRecruitmentPosts] = await Promise.all([
+            const results = await Promise.all([
                 getScrims(),
                 getTeams(),
                 getPlayers(),
                 getAllReportsForAdmin(1, 100),
                 getAllTransferActivitiesForAdmin(100),
-                getAllRecruitmentPostsForAdmin()
+                getAllRecruitmentPostsForAdmin(),
+                getFeedback(),
+                getAllPlayerStats(),
+                getAllTeamStats()
             ]);
+
+            const allScrims = results[0];
+            const allTeams = results[1];
+            const allPlayers = results[2];
+            const allReports = results[3];
+            const allTransfers = results[4];
+            const allRecruitmentPosts = results[5];
+            const allFeedback = results[6];
+            const allPlayerStatsData = results[7];
+            const allTeamStatsData = results[8];
+
             setScrims(allScrims);
             setTeams(allTeams);
             setPlayers(allPlayers);
             setReports(allReports.data);
             setTransfers(allTransfers);
             setRecruitmentPosts(allRecruitmentPosts);
+            setFeedback(allFeedback);
+            setAllPlayerStats(allPlayerStatsData);
+            setAllTeamStats(allTeamStatsData);
         } catch (error) {
             console.error("Failed to load data:", error);
             toast({
@@ -245,6 +270,18 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleDeleteScrim = async (scrimId: string) => {
+        if (!window.confirm("Are you sure you want to delete this scrim? This action cannot be undone.")) return;
+
+        try {
+            await deleteScrim(scrimId);
+            toast({ title: "Success", description: "Scrim deleted successfully" });
+            setScrims(scrims.filter(s => s.id !== scrimId));
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message, variant: "destructive" });
+        }
+    };
+
     const handleLogout = async () => {
         await signOut();
         navigate("/");
@@ -297,8 +334,12 @@ const AdminDashboard = () => {
             </ResponsiveNavbar>
 
             <main className="container mx-auto px-4 pt-32 pb-8">
-                <Tabs defaultValue="scrims" className="space-y-4">
+                <Tabs defaultValue="overview" className="space-y-4">
                     <TabsList>
+                        <TabsTrigger value="overview" className="flex items-center gap-2">
+                            <Activity className="h-4 w-4" />
+                            Overview
+                        </TabsTrigger>
                         <TabsTrigger value="scrims">Scrims</TabsTrigger>
                         <TabsTrigger value="users">User Management</TabsTrigger>
                         <TabsTrigger value="teams">Teams</TabsTrigger>
@@ -309,7 +350,244 @@ const AdminDashboard = () => {
                         </TabsTrigger>
                         <TabsTrigger value="recruitment">Recruitment</TabsTrigger>
                         <TabsTrigger value="transfers">Transfers</TabsTrigger>
+                        <TabsTrigger value="feedback" className="flex items-center gap-2">
+                            <MessageCircle className="h-4 w-4" />
+                            Feedback
+                        </TabsTrigger>
                     </TabsList>
+
+                    <TabsContent value="overview" className="space-y-4">
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">
+                                        Total Players
+                                    </CardTitle>
+                                    <User className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{players.length}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Registered players
+                                    </p>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">
+                                        Total Teams
+                                    </CardTitle>
+                                    <Users className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{teams.length}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Registered teams
+                                    </p>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">
+                                        Active Scrims (Today)
+                                    </CardTitle>
+                                    <Target className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">
+                                        {scrims.filter(s => {
+                                            const scrimDate = new Date(s.startTime || "");
+                                            const today = new Date();
+                                            return scrimDate.getDate() === today.getDate() &&
+                                                scrimDate.getMonth() === today.getMonth() &&
+                                                scrimDate.getFullYear() === today.getFullYear();
+                                        }).length}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Scheduled for today
+                                    </p>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">
+                                        Pending Reports
+                                    </CardTitle>
+                                    <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{reports.length}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Recent reports
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                            <Card className="col-span-4">
+                                <CardHeader>
+                                    <CardTitle>Role Distribution</CardTitle>
+                                    <CardDescription>Breakdown of player roles across the platform</CardDescription>
+                                </CardHeader>
+                                <CardContent className="pl-2">
+                                    <div className="h-[350px]">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={Object.entries(players.reduce((acc: any, player) => {
+                                                        const role = player.role || "Unassigned";
+                                                        acc[role] = (acc[role] || 0) + 1;
+                                                        return acc;
+                                                    }, {})).map(([name, value]) => ({ name, value }))}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    labelLine={false}
+                                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                                    outerRadius={120}
+                                                    fill="#8884d8"
+                                                    dataKey="value"
+                                                >
+                                                    {Object.entries(players.reduce((acc: any, player) => {
+                                                        const role = player.role || "Unassigned";
+                                                        acc[role] = (acc[role] || 0) + 1;
+                                                        return acc;
+                                                    }, {})).map((entry: any, index: number) => {
+                                                        const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#FF6384'];
+                                                        return <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />;
+                                                    })}
+                                                </Pie>
+                                                <Tooltip />
+                                                <Legend />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <div className="col-span-3 grid gap-4">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Top Players</CardTitle>
+                                        <CardDescription>Highest kills across all matches</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Player</TableHead>
+                                                    <TableHead className="text-right">Kills</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {Object.entries(allPlayerStats.reduce((acc: any, stat) => {
+                                                    const pKey = stat.player?.username || stat.player_id;
+                                                    if (!acc[pKey]) acc[pKey] = { name: stat.player?.in_game_name || stat.player?.username || "Unknown", kills: 0 };
+                                                    acc[pKey].kills += stat.kills;
+                                                    return acc;
+                                                }, {}))
+                                                    .sort(([, a]: any, [, b]: any) => b.kills - a.kills)
+                                                    .slice(0, 5)
+                                                    .map(([key, data]: any) => (
+                                                        <TableRow key={key}>
+                                                            <TableCell className="font-medium">{data.name}</TableCell>
+                                                            <TableCell className="text-right font-bold">{data.kills}</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Top Teams</CardTitle>
+                                        <CardDescription>Most points accumulated</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Team</TableHead>
+                                                    <TableHead className="text-right">Points</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {Object.entries(allTeamStats.reduce((acc: any, stat) => {
+                                                    const tKey = stat.team_id;
+                                                    if (!acc[tKey]) acc[tKey] = { name: stat.team?.name || "Unknown", points: 0 };
+                                                    acc[tKey].points += stat.total_points;
+                                                    return acc;
+                                                }, {}))
+                                                    .sort(([, a]: any, [, b]: any) => b.points - a.points)
+                                                    .slice(0, 5)
+                                                    .map(([key, data]: any) => (
+                                                        <TableRow key={key}>
+                                                            <TableCell className="font-medium">{data.name}</TableCell>
+                                                            <TableCell className="text-right font-bold">{data.points}</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="feedback">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Community Feedback</CardTitle>
+                                <CardDescription>View all feedback submitted by users.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>User</TableHead>
+                                            <TableHead>Tag</TableHead>
+                                            <TableHead>Content</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {feedback.map((f) => (
+                                            <TableRow key={f.id}>
+                                                <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                                                    {new Date(f.createdAt).toLocaleDateString()} {new Date(f.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium flex items-center gap-2">
+                                                            {f.player?.username || "Unknown"}
+                                                            {f.player?.profileUrl && (
+                                                                <a href={f.player.profileUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline">
+                                                                    View Profile
+                                                                </a>
+                                                            )}
+                                                        </span>
+                                                        <span className="text-xs text-muted-foreground">{f.player?.inGameName || "-"}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline">{f.tag}</Badge>
+                                                </TableCell>
+                                                <TableCell className="max-w-md break-words whitespace-pre-wrap">
+                                                    {f.content}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {feedback.length === 0 && (
+                                            <TableRow>
+                                                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                                                    No feedback submissions found
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
 
                     <TabsContent value="scrims" className="space-y-4">
                         <Card>
@@ -421,6 +699,9 @@ const AdminDashboard = () => {
                                                                     )}
                                                                     <Button variant="outline" onClick={() => navigate(`/scrim/${scrim.id}`)}>
                                                                         Manage
+                                                                    </Button>
+                                                                    <Button variant="destructive" size="icon" onClick={() => handleDeleteScrim(scrim.id)}>
+                                                                        <Trash2 className="h-4 w-4" />
                                                                     </Button>
                                                                 </div>
                                                             </div>
@@ -1014,7 +1295,7 @@ const AdminDashboard = () => {
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>            </main>
-        </div>
+        </div >
     );
 };
 
