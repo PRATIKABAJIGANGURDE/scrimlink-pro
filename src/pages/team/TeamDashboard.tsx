@@ -597,7 +597,7 @@ const TeamDashboard = () => {
                               </div>
                             )}
 
-                            <Button variant="outline" size="sm" onClick={() => navigate(`/rankings`)}>
+                            <Button variant="outline" size="sm" onClick={() => navigate(`/tournament/${t.id}/standings`)}>
                               View Standings
                             </Button>
                           </div>

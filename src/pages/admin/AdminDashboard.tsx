@@ -38,7 +38,8 @@ import {
     getTournamentTeams,
     getTournamentTeamsByTournamentId,
     addTournamentTeam,
-    deleteTournamentTeam
+    deleteTournamentTeam,
+    updateTournamentTeamStats
 } from "@/lib/storage";
 import { Scrim, Match, Team, Player, Feedback, Tournament, TournamentRound, TournamentGroup, TournamentTeam } from "@/types";
 import { Shield, LogOut, Plus, Target, Calendar, Trophy, BarChart, Users, User, AlertTriangle, MessageCircle, Activity, Trash2, Medal } from "lucide-react";
@@ -97,6 +98,16 @@ const AdminDashboard = () => {
         name: "",
         matchCount: 4,
         startTime: "",
+    });
+
+    // Tournament Stats Editing
+    const [isEditStatsOpen, setIsEditStatsOpen] = useState(false);
+    const [editingEntry, setEditingEntry] = useState<TournamentTeam | null>(null);
+    const [editStatsForm, setEditStatsForm] = useState({
+        matchesPlayed: 0,
+        kills: 0,
+        wins: 0,
+        totalPoints: 0
     });
 
     useEffect(() => {
@@ -475,6 +486,20 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleUpdateStats = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingEntry || !selectedTournament) return;
+        try {
+            await updateTournamentTeamStats(editingEntry.id, editStatsForm);
+            setIsEditStatsOpen(false);
+            loadTournamentDetails(selectedTournament.id);
+            toast({ title: "Success", description: "Stats updated successfully" });
+        } catch (error) {
+            console.error(error);
+            toast({ title: "Error", description: "Failed to update stats" });
+        }
+    };
+
     const handleLogout = async () => {
         await signOut();
         navigate("/");
@@ -720,12 +745,12 @@ const AdminDashboard = () => {
                                                         <Table>
                                                             <TableHeader>
                                                                 <TableRow>
-                                                                    <TableHead className="w-[50px]">Pos</TableHead>
+                                                                    <TableHead className="w-[80px]">Rank</TableHead>
                                                                     <TableHead>Team</TableHead>
-                                                                    <TableHead className="text-right">MP</TableHead>
-                                                                    <TableHead className="text-right">Kills</TableHead>
-                                                                    <TableHead className="text-right">Wins</TableHead>
-                                                                    <TableHead className="text-right font-bold">Points</TableHead>
+                                                                    <TableHead className="w-[100px] text-right">Matches</TableHead>
+                                                                    <TableHead className="w-[100px] text-right">Wins</TableHead>
+                                                                    <TableHead className="w-[100px] text-right">Kills</TableHead>
+                                                                    <TableHead className="w-[120px] text-right font-bold">Total Points</TableHead>
                                                                 </TableRow>
                                                             </TableHeader>
                                                             <TableBody>
@@ -735,10 +760,30 @@ const AdminDashboard = () => {
                                                                     .map((tt, index) => (
                                                                         <TableRow key={tt.id}>
                                                                             <TableCell className="font-medium">{index + 1}</TableCell>
-                                                                            <TableCell>{tt.teamName}</TableCell>
+                                                                            <TableCell>
+                                                                                <div className="flex items-center justify-between">
+                                                                                    <span>{tt.teamName}</span>
+                                                                                    <Button
+                                                                                        variant="ghost"
+                                                                                        size="sm"
+                                                                                        onClick={() => {
+                                                                                            setEditingEntry(tt);
+                                                                                            setEditStatsForm({
+                                                                                                matchesPlayed: tt.matchesPlayed,
+                                                                                                kills: tt.kills,
+                                                                                                wins: tt.wins,
+                                                                                                totalPoints: tt.totalPoints
+                                                                                            });
+                                                                                            setIsEditStatsOpen(true);
+                                                                                        }}
+                                                                                    >
+                                                                                        <BarChart className="h-4 w-4" />
+                                                                                    </Button>
+                                                                                </div>
+                                                                            </TableCell>
                                                                             <TableCell className="text-right">{tt.matchesPlayed}</TableCell>
-                                                                            <TableCell className="text-right">{tt.kills}</TableCell>
                                                                             <TableCell className="text-right">{tt.wins}</TableCell>
+                                                                            <TableCell className="text-right">{tt.kills}</TableCell>
                                                                             <TableCell className="text-right font-bold">{tt.totalPoints}</TableCell>
                                                                         </TableRow>
                                                                     ))}
@@ -1851,6 +1896,57 @@ const AdminDashboard = () => {
                     </Dialog>
                 </main>
             )}
+            {/* Edit Stats Dialog */}
+            <Dialog open={isEditStatsOpen} onOpenChange={setIsEditStatsOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit Team Stats</DialogTitle>
+                        <DialogDescription>
+                            Update tournament performance for {editingEntry?.teamName}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleUpdateStats} className="space-y-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Matches Played</Label>
+                                <Input
+                                    type="number"
+                                    value={editStatsForm.matchesPlayed}
+                                    onChange={(e) => setEditStatsForm({ ...editStatsForm, matchesPlayed: parseInt(e.target.value) || 0 })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Booyahs (Wins)</Label>
+                                <Input
+                                    type="number"
+                                    value={editStatsForm.wins}
+                                    onChange={(e) => setEditStatsForm({ ...editStatsForm, wins: parseInt(e.target.value) || 0 })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Total Kills</Label>
+                                <Input
+                                    type="number"
+                                    value={editStatsForm.kills}
+                                    onChange={(e) => setEditStatsForm({ ...editStatsForm, kills: parseInt(e.target.value) || 0 })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Total Points</Label>
+                                <Input
+                                    type="number"
+                                    value={editStatsForm.totalPoints}
+                                    onChange={(e) => setEditStatsForm({ ...editStatsForm, totalPoints: parseInt(e.target.value) || 0 })}
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setIsEditStatsOpen(false)}>Cancel</Button>
+                            <Button type="submit">Save Changes</Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

@@ -1981,6 +1981,20 @@ export const saveTournament = async (tournament: Tournament): Promise<void> => {
   if (error) throw error;
 };
 
+export const getTournamentById = async (id: string): Promise<Tournament | null> => {
+  const { data, error } = await supabase.from('tournaments').select('*').eq('id', id).single();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    ...data,
+    maxTeams: data.max_teams,
+    currentTeams: data.current_teams,
+    startDate: data.start_date,
+    endDate: data.end_date,
+    createdAt: data.created_at
+  };
+};
+
 export const deleteTournament = async (id: string): Promise<void> => {
   // Simple delete for now - in production should cascade
   const { error } = await supabase.from('tournaments').delete().eq('id', id);
@@ -2098,6 +2112,17 @@ export const addTournamentTeam = async (entry: TournamentTeam): Promise<void> =>
     kills: entry.kills,
     joined_at: entry.joinedAt
   });
+  if (error) throw error;
+};
+
+export const updateTournamentTeamStats = async (id: string, stats: Partial<TournamentTeam>): Promise<void> => {
+  const updateData: any = {};
+  if (stats.matchesPlayed !== undefined) updateData.matches_played = stats.matchesPlayed;
+  if (stats.totalPoints !== undefined) updateData.total_points = stats.totalPoints;
+  if (stats.wins !== undefined) updateData.wins = stats.wins;
+  if (stats.kills !== undefined) updateData.kills = stats.kills;
+
+  const { error } = await supabase.from('tournament_teams').update(updateData).eq('id', id);
   if (error) throw error;
 };
 

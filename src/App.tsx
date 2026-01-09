@@ -24,6 +24,7 @@ import Rankings from "./pages/Rankings";
 import MatchResults from "./pages/MatchResults";
 import Recruitment from "./pages/Recruitment";
 import Feedback from "./pages/Feedback";
+import TournamentStandings from "./pages/TournamentStandings";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/rankings" element={<Rankings />} />
           <Route path="/match-results" element={<MatchResults />} />
+          <Route path="/tournament/:id/standings" element={<TournamentStandings />} />
           <Route path="/team/register" element={<TeamRegister />} />
           <Route path="/team/login" element={<TeamLogin />} />
           <Route path="/team/dashboard" element={<TeamDashboard />} />
