@@ -132,8 +132,8 @@ const PlayerRegister = () => {
 
     // Manual validation if adding profile
     if (isAddingProfile) {
-      if (!formData.username || !formData.phoneNumber) {
-        toast({ title: "Validation Error", description: "Username and Phone Number are required", variant: "destructive" });
+      if (!formData.username) {
+        toast({ title: "Validation Error", description: "Username is required", variant: "destructive" });
         setLoading(false);
         return;
       }
@@ -312,7 +312,6 @@ const PlayerRegister = () => {
                   placeholder="+91 1234567890"
                   value={formData.phoneNumber}
                   onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                  required
                 />
               </div>
 

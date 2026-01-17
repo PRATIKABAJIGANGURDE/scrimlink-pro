@@ -53,10 +53,10 @@ const PlayerOnboarding = () => {
         e.preventDefault();
         setSaving(true);
 
-        if (!formData.gameUid.trim() || !formData.inGameName.trim() || !formData.phoneNumber.trim()) {
+        if (!formData.gameUid.trim() || !formData.inGameName.trim()) {
             toast({
                 title: "Error",
-                description: "Please fill in all fields",
+                description: "Please fill in Game UID and IGN",
                 variant: "destructive"
             });
             setSaving(false);
@@ -148,10 +148,9 @@ const PlayerOnboarding = () => {
                                         placeholder="+91 1234567890"
                                         value={formData.phoneNumber}
                                         onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                                        required
                                     />
                                 </div>
-                                <p className="text-xs text-muted-foreground">Required for tournament verification.</p>
+                                <p className="text-xs text-muted-foreground">Optional: Used for tournament verification.</p>
                             </div>
                         )}
 

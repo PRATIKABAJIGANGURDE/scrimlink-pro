@@ -28,9 +28,9 @@ export const playerRegisterSchema = z.object({
   confirmPassword: z.string(),
   phoneNumber: z.string()
     .trim()
-    .min(10, { message: "Please enter a valid phone number" })
     .max(20, { message: "Phone number is too long" })
-    .regex(/^[+]?[0-9\s-]+$/, { message: "Please enter a valid phone number" }),
+    .regex(/^[+]?[0-9\s-]*$/, { message: "Please enter a valid phone number" })
+    .optional(),
   role: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",

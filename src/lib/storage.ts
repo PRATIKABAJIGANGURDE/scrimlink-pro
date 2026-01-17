@@ -95,7 +95,8 @@ export const getPlayers = async (): Promise<Player[]> => {
     gameUid: p.game_uid,
     inGameName: p.in_game_name,
     discordUsername: p.discord_username,
-    createdAt: p.created_at
+    createdAt: p.created_at,
+    phoneNumber: p.phone_number
   }));
 };
 
@@ -107,7 +108,7 @@ export const savePlayer = async (player: Player): Promise<void> => {
     team_id: player.teamId,
     status: player.status,
     role: player.role,
-    phone_number: player.phoneNumber, // also missing phone number!
+    phone_number: player.phoneNumber,
     created_at: player.createdAt
   });
   if (error) throw error;
@@ -129,7 +130,8 @@ export const getPlayerByEmail = async (email: string): Promise<Player | null> =>
     gameUid: data.game_uid,
     inGameName: data.in_game_name,
     discordUsername: data.discord_username,
-    createdAt: data.created_at
+    createdAt: data.created_at,
+    phoneNumber: data.phone_number
   };
 };
 
@@ -149,7 +151,8 @@ export const getPlayerById = async (id: string): Promise<Player | null> => {
     gameUid: data.game_uid,
     inGameName: data.in_game_name,
     discordUsername: data.discord_username,
-    createdAt: data.created_at
+    createdAt: data.created_at,
+    phoneNumber: data.phone_number
   };
 };
 
@@ -167,7 +170,8 @@ export const getPlayersByTeamId = async (teamId: string): Promise<Player[]> => {
     gameUid: p.game_uid,
     inGameName: p.in_game_name,
     discordUsername: p.discord_username,
-    createdAt: p.created_at
+    createdAt: p.created_at,
+    phoneNumber: p.phone_number
   }));
 };
 
@@ -879,7 +883,8 @@ export const getCurrentPlayer = async () => {
     youtubeUrl: data.youtube_url,
     gameUid: data.game_uid,
     inGameName: data.in_game_name,
-    createdAt: data.created_at
+    createdAt: data.created_at,
+    phoneNumber: data.phone_number
   };
 };
 
@@ -1156,7 +1161,8 @@ export const getPublicPlayerProfile = async (playerId: string) => {
       createdAt: player.created_at,
       instagramUrl: player.instagram_url,
       youtubeUrl: player.youtube_url,
-      inGameName: player.in_game_name
+      inGameName: player.in_game_name,
+      phoneNumber: player.phone_number
     },
     currentTeam,
     history: history?.map((h: any) => ({
@@ -1217,7 +1223,8 @@ export const getPublicPlayerProfileByUsername = async (username: string) => {
       instagramUrl: player.instagram_url,
       youtubeUrl: player.youtube_url,
       discordUsername: player.discord_username,
-      inGameName: player.in_game_name
+      inGameName: player.in_game_name,
+      phoneNumber: player.phone_number
     },
     currentTeam,
     history: history?.map((h: any) => ({
